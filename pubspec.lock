@@ -306,7 +306,7 @@ packages:
     source: hosted
     version: "3.6.1"
   firebase_app_check:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: firebase_app_check
       sha256: f4e6edfbdf178af7004589c52975a04c8f79ca8118e13bfd54ed2fca64271ba6
@@ -904,6 +904,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.7.0"
+  recase:
+    dependency: "direct main"
+    description:
+      name: recase
+      sha256: e4eb4ec2dcdee52dcf99cb4ceabaffc631d7424ee55e56f280bc039737f89213
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
   retry:
     dependency: transitive
     description:

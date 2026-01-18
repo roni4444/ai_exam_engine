@@ -15,6 +15,8 @@ import '../providers/library_provider.dart';
 import '../providers/supabase_provider.dart';
 import '../services/gemini_service.dart';
 import '../widgets/action_card_widget.dart';
+import '../widgets/add_candidate_group_modal.dart';
+import '../widgets/add_candidate_modal.dart';
 import '../widgets/blueprint_card_widget.dart';
 import '../widgets/candidate_card_widget.dart';
 import '../widgets/exam_card_widget.dart';
@@ -612,7 +614,11 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                         width: double.infinity,
                                         child: ElevatedButton(
                                           onPressed: () {
-                                            setState(() {});
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) =>
+                                                  AddCandidateModal(onCandidateAdded: () => context.read<CandidateProvider>().fetchCandidates()),
+                                            );
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(0xFF16A34A),
@@ -629,6 +635,44 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                               SizedBox(width: 8),
                                               Text(
                                                 'Add Candidate',
+                                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      constraints: BoxConstraints(maxWidth: 200),
+                                      padding: const EdgeInsets.all(24),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        border: Border(top: BorderSide(color: Colors.grey.shade100)),
+                                      ),
+                                      child: SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => CreateCandidateGroupModal(onGroupCreated: () {}),
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(0xFF16A34A),
+                                            // foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            elevation: 10,
+                                            shadowColor: const Color(0xFF16A34A).withValues(alpha: 255 * 0.3),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.add, size: 20, color: Colors.white),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Add Group',
                                                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
                                               ),
                                             ],
@@ -656,14 +700,24 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                     }
 
                                     return Column(
-                                      children: candidateProvider.candidates.map((file) {
-                                        return CandidateCard(
-                                          file: file,
-                                          onDelete: () {
-                                            candidateProvider.deleteCandidate(file.name);
-                                          },
-                                        );
-                                      }).toList(),
+                                      children: [
+                                        Wrap(
+                                          spacing: 16,
+                                          children: candidateProvider.groups.map((group) {
+                                            return ChoiceChip(label: Text(group.name), selected: false, onSelected: (item) {});
+                                          }).toList(),
+                                        ),
+                                        Column(
+                                          children: candidateProvider.candidates.map((file) {
+                                            return CandidateCard(
+                                              file: file,
+                                              onDelete: () {
+                                                candidateProvider.deleteCandidate(file.name);
+                                              },
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ],
                                     );
                                   },
                                 ),
@@ -691,9 +745,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                         width: double.infinity,
                                         child: ElevatedButton(
                                           onPressed: () {
-                                            setState(() {
-                                              _handleFileUpload(supabaseClient);
-                                            });
+                                            setState(() {});
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(0xFF16A34A),

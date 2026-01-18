@@ -41,11 +41,20 @@ class CandidateCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(DateFormat('MMM d, yyyy').format(file.createdAt), style: TextStyle(fontSize: 10, color: Colors.grey[500])),
                   const SizedBox(height: 2),
-                  Text(file.id, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                  Text(file.email, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                  const SizedBox(height: 2),
+                  Text(file.phone ?? "", style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                  const SizedBox(height: 2),
+                  Text(file.rollNumber ?? "", style: TextStyle(fontSize: 10, color: Colors.grey[500])),
                 ],
               ),
             ),
-            /*ElevatedButton(onPressed: () {}, child: Text(file.email != null ? "Verified" : "Not yet Verified")),
+            /* Text(
+              file.name,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(width: 12),*/
             ElevatedButton.icon(
               onPressed: onDelete,

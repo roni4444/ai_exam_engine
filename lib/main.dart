@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:ai_exam_engine/providers/candidate_provider.dart';
 import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
 import 'package:ai_exam_engine/providers/gemini_provider.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:provider/provider.dart';
@@ -31,17 +33,23 @@ void main() async {
 
     // Initialize Firebase
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await FirebaseAppCheck.instance.activate(
+      // You can also use a `ReCaptchaEnterpriseProvider` provider instance as an
+      // argument for `webProvider`
+      providerWeb: ReCaptchaV3Provider(dotenv.env['RECAPTCHA_SITE_KEY_V3'] ?? ''),
+    );
     // Initialize Supabase
     await Supabase.initialize(url: SupabaseConfig.url, anonKey: SupabaseConfig.anonKey);
 
-    // Enable verbose logging for debugging (remove in production)
-    OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-    // Initialize with your OneSignal App ID
-    OneSignal.initialize(OneSignalConfig.appId);
-    // Use this method to prompt for push notifications.
-    // We recommend removing this method after testing and instead use In-App Messages to prompt for notification permission.
-    OneSignal.Notifications.requestPermission(false);
-
+    if (!kIsWeb) {
+      // Enable verbose logging for debugging (remove in production)
+      OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+      // Initialize with your OneSignal App ID
+      OneSignal.initialize(OneSignalConfig.appId);
+      // Use this method to prompt for push notifications.
+      // We recommend removing this method after testing and instead use In-App Messages to prompt for notification permission.
+      OneSignal.Notifications.requestPermission(false);
+    }
     runApp(const MyApp());
   } catch (e) {
     // Show error screen if initialization fails

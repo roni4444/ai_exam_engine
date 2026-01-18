@@ -22,7 +22,7 @@ class CandidateProvider with ChangeNotifier {
     if (_searchQuery != null && _searchQuery!.isNotEmpty) {
       filtered = filtered.where((c) {
         return c.name.toLowerCase().contains(_searchQuery!.toLowerCase()) ||
-            (c.email?.toLowerCase().contains(_searchQuery!.toLowerCase()) ?? false) ||
+            (c.email.toLowerCase().contains(_searchQuery!.toLowerCase())) ||
             (c.rollNumber?.toLowerCase().contains(_searchQuery!.toLowerCase()) ?? false);
       }).toList();
     }
@@ -121,6 +121,7 @@ class CandidateProvider with ChangeNotifier {
   Future<Candidate> createCandidate({
     required String name,
     String? email,
+    String? phone,
     String? rollNumber,
     String? class_,
     String? section,
@@ -142,6 +143,7 @@ class CandidateProvider with ChangeNotifier {
             'user_id': userId,
             'name': name,
             'email': email,
+            'phone': phone,
             'roll_number': rollNumber,
             'class': class_,
             'section': section,
@@ -182,6 +184,7 @@ class CandidateProvider with ChangeNotifier {
           'user_id': userId,
           'name': data['name'] as String,
           'email': data['email'] as String?,
+          'phone': data['phone'] as String?,
           'roll_number': data['roll_number'] as String?,
           'class': data['class'] as String?,
           'section': data['section'] as String?,
@@ -212,6 +215,7 @@ class CandidateProvider with ChangeNotifier {
     required String candidateId,
     String? name,
     String? email,
+    String? phone,
     String? rollNumber,
     String? class_,
     String? section,
@@ -227,6 +231,7 @@ class CandidateProvider with ChangeNotifier {
       if (name != null) updateData['name'] = name;
       if (email != null) updateData['email'] = email;
       if (rollNumber != null) updateData['roll_number'] = rollNumber;
+      if (phone != null) updateData['phone'] = phone;
       if (class_ != null) updateData['class'] = class_;
       if (section != null) updateData['section'] = section;
       if (metadata != null) updateData['metadata'] = metadata;
@@ -309,6 +314,13 @@ class CandidateProvider with ChangeNotifier {
           .insert({'user_id': userId, 'name': name, 'description': description, 'candidate_ids': candidateIds})
           .select()
           .single();
+
+      final groupId = response['id'];
+      final associations = candidateIds
+          .map((candidateId) => {'candidate_id': candidateId, 'group_id': groupId, 'assigned_at': DateTime.now().toIso8601String()})
+          .toList();
+
+      await _supabase.from('candidate_group_members').insert(associations);
 
       final group = CandidateGroup.fromJson(response);
       _groups.insert(0, group);

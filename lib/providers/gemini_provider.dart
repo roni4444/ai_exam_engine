@@ -7,7 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/exam_config.dart';
 
 class GeminiProvider with ChangeNotifier {
-  final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-3-flash-preview');
+  // final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-3-flash-preview');
 
   Future<Map<String, dynamic>?> genAIOnPDF({required String fileName, required Function(String) onStatusUpdate}) async {
     final supabase = Supabase.instance.client;
@@ -19,8 +19,8 @@ class GeminiProvider with ChangeNotifier {
       // Detect language
       onStatusUpdate('detecting_language');
       // notifyListeners();
-      final language = await languageDetection(bytes: bytes);
-      supabase.from('library_items').upsert({'language': language});
+      final language = kDebugMode ? "English" : await languageDetection(bytes: bytes);
+      await supabase.from('library_items').update({'language': language}).eq("name", fileName);
       /*// Translate if needed
       String processedText = rawText;
       if (!language.toLowerCase().contains('english')) {
@@ -30,21 +30,32 @@ class GeminiProvider with ChangeNotifier {
 
       // Analyze chapters
       onStatusUpdate('analyzing_chapters');
-      final chapters = await chapterAnalysis(bytes: bytes, onStatusUpdate: onStatusUpdate);
+      List<AnalyzedChapter> chapters = await chapterAnalysis(bytes: bytes, onStatusUpdate: onStatusUpdate);
+      chapters = chapters.where((c) {
+        return c.title.trim().isNotEmpty && c.concepts.isNotEmpty;
+      }).toList();
       if (kDebugMode) {
         print("Chapters: $chapters");
+        print("Chapters count: ${chapters.length}");
       }
       final rows = chapters
           .map(
             (c) => {'file_name': fileName, 'title': c.title, 'concepts': c.concepts.map((concept) => concept.toJson()).toList(), 'user_id': userId},
           )
           .toList();
-      supabase.from('chapters').upsert(rows);
+      if (kDebugMode) {
+        print("rows: $rows");
+      }
+      final data = await supabase.from('chapters').insert(rows).select();
+      if (kDebugMode) {
+        print("data: $data");
+      }
       /*// Generate title
       onStatusUpdate('generating_title');
       final title = await examTitleSuggestion(bytes: bytes);*/
+      await supabase.from('library_items').update({'is_gemini_processed': rows.isNotEmpty}).eq("name", fileName);
+      notifyListeners();
       onStatusUpdate('completed');
-      supabase.from('library_items').upsert({'is_gemini_processed': rows.isNotEmpty});
       return {'chapters': chapters, 'language': language, 'is_gemini_processed': rows.isNotEmpty};
     } catch (e) {
       if (kDebugMode) print('Document processing error: $e');
@@ -53,22 +64,28 @@ class GeminiProvider with ChangeNotifier {
   }
 
   Future<String?> languageDetection({required Uint8List bytes}) async {
-    // Create InlineDataPart
-    final docPart = InlineDataPart('application/pdf', bytes);
+    final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-3-flash-preview');
+    try {
+      // Create InlineDataPart
+      final docPart = InlineDataPart('application/pdf', bytes);
 
-    // Prompt
-    final prompt = TextPart("Identify the primary language of this file. Return ONLY the language name (e.g., English, Bengali, Hindi, Spanish).");
+      // Prompt
+      final prompt = TextPart("Identify the primary language of this file. Return ONLY the language name (e.g., English, Bengali, Hindi, Spanish).");
 
-    // Gemini call
-    final response = await model.generateContent([
-      Content.multi([prompt, docPart]),
-    ]);
+      // Gemini call
+      final response = await model.generateContent([
+        Content.multi([prompt, docPart]),
+      ]);
 
-    if (kDebugMode) {
-      print(response.text);
+      if (kDebugMode) {
+        print(response.text);
+      }
+
+      return response.text;
+    } catch (e) {
+      if (kDebugMode) print('Language Detection error: $e');
+      return 'English';
     }
-
-    return response.text;
   }
 
   Future<List<AnalyzedChapter>> chapterAnalysis({required Uint8List bytes, required Function(String) onStatusUpdate}) async {
@@ -80,14 +97,16 @@ class GeminiProvider with ChangeNotifier {
             items: Schema.object(
               properties: {
                 'name': Schema.string(description: 'Concept name'),
-                'description': Schema.string(description: 'Brief description of the concept'),
-                'type': Schema.enumString(enumValues: ['definition', 'process', 'cause-effect', 'misconception']),
+                'description': Schema.string(description: 'Brief description'),
+                'type': Schema.enumString(enumValues: ['definition', 'process', 'cause-effect', 'misconception', 'general']),
               },
+              // concept fields can be optional
               optionalProperties: ['name', 'description', 'type'],
             ),
           ),
         },
-        optionalProperties: ['title', 'concepts'],
+        // 🚨 IMPORTANT: NOTHING optional here
+        optionalProperties: [],
       ),
     );
     // Create InlineDataPart
@@ -95,7 +114,28 @@ class GeminiProvider with ChangeNotifier {
 
     // Prompt
     final prompt = TextPart("Analyze this educational text and identify distinct chapters or major topics.");
+    final model = FirebaseAI.googleAI().generativeModel(
+      model: 'gemini-3-flash-preview',
+      systemInstruction: Content.system('''
+      You must output ONLY valid JSON.
+        Rules:
+        - Output must be a JSON array.
+        - Each array item represents exactly ONE chapter.
+        - Each chapter MUST contain:
+        - "title" (string)
+        - "concepts" (array, can be empty)
+        - Never split title and concepts into separate objects.
+        - Never omit required keys.
+        - Do not add extra keys.
+        - Do not add markdown or explanations.
 
+        Concept rules:
+        - Each concept may include name, description, and type.
+        - If type is unknown, use "general".
+        - Keep descriptions short (1 sentence).
+        
+      Follow the provided JSON schema exactly.'''),
+    );
     // Gemini call
     try {
       onStatusUpdate('analyzing');
@@ -112,9 +152,26 @@ class GeminiProvider with ChangeNotifier {
       if (parsed == null) return [];
 
       List<AnalyzedChapter> chapters = [];
+      String? currentTitle;
+
       if (parsed is List) {
-        for (var item in parsed) {
-          chapters.add(AnalyzedChapter.fromJson(item));
+        for (final item in parsed) {
+          if (item is! Map<String, dynamic>) continue;
+
+          // If this item has a title, store it
+          if (item.containsKey('title')) {
+            currentTitle = item['title']?.toString().trim();
+          }
+
+          // If this item has concepts, pair with last title
+          if (item.containsKey('concepts') && currentTitle != null) {
+            final chapterJson = {'title': currentTitle, 'concepts': item['concepts']};
+
+            chapters.add(AnalyzedChapter.fromJson(chapterJson));
+
+            // Reset so next chapter doesn't reuse the title
+            currentTitle = null;
+          }
         }
       }
 
@@ -126,6 +183,7 @@ class GeminiProvider with ChangeNotifier {
   }
 
   Future<String?> examTitleSuggestion({required Uint8List bytes}) async {
+    final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-3-flash-preview');
     try {
       // Create InlineDataPart
       final docPart = InlineDataPart('application/pdf', bytes);

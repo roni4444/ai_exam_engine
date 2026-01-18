@@ -5,8 +5,9 @@ class Candidate {
   final String id;
   final String userId;
   final String name;
-  final String? email;
+  final String email;
   final String? rollNumber;
+  final String? phone;
   final String? class_;
   final String? section;
   final Map<String, dynamic>? metadata; // Additional custom fields
@@ -17,13 +18,14 @@ class Candidate {
     required this.id,
     required this.userId,
     required this.name,
-    this.email,
+    required this.email,
     this.rollNumber,
     this.class_,
     this.section,
     this.metadata,
     required this.createdAt,
     required this.updatedAt,
+    this.phone,
   });
 
   Map<String, dynamic> toJson() => {
@@ -44,7 +46,8 @@ class Candidate {
       id: json['id'] as String,
       userId: json['user_id'] as String,
       name: json['name'] as String,
-      email: json['email'] as String?,
+      email: json['email'] as String,
+      phone: json['phone'] as String?,
       rollNumber: json['roll_number'] as String?,
       class_: json['class'] as String?,
       section: json['section'] as String?,
@@ -61,6 +64,7 @@ class Candidate {
       userId: userId,
       name: name ?? this.name,
       email: email ?? this.email,
+      phone: phone ?? this.phone,
       rollNumber: rollNumber ?? this.rollNumber,
       class_: class_ ?? this.class_,
       section: section ?? this.section,

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../models/exam_models.dart';
 import '../providers/gemini_provider.dart';
+import '../providers/library_provider.dart';
 import '../screens/dashboard_screen.dart';
 
 // enum ProcessingStatus { idle, extracting, analyzing, completed }
@@ -96,6 +97,7 @@ class _LibraryFileCardState extends State<LibraryFileCard> {
                                       fileProcessingStatus = ProcessingStatus.analyzing;
                                     } else if (status == 'completed') {
                                       fileProcessingStatus = ProcessingStatus.completed;
+                                      context.read<LibraryProvider>().loadLibraryFiles();
                                     }
                                   });
                                 },
