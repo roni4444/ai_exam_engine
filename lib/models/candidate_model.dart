@@ -11,8 +11,8 @@ class Candidate {
   final String? class_;
   final String? section;
   final Map<String, dynamic>? metadata; // Additional custom fields
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Candidate({
     required this.id,
@@ -23,8 +23,8 @@ class Candidate {
     this.class_,
     this.section,
     this.metadata,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.phone,
   });
 
@@ -37,8 +37,8 @@ class Candidate {
     'class': class_,
     'section': section,
     'metadata': metadata,
-    'created_at': createdAt.toIso8601String(),
-    'updated_at': updatedAt.toIso8601String(),
+    'created_at': createdAt?.toIso8601String(),
+    'updated_at': updatedAt?.toIso8601String(),
   };
 
   factory Candidate.fromJson(Map<String, dynamic> json) {
@@ -52,8 +52,8 @@ class Candidate {
       class_: json['class'] as String?,
       section: json['section'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: DateTime.parse(json['created_at'] as String? ?? ""),
+      updatedAt: DateTime.parse(json['updated_at'] as String? ?? ""),
     );
   }
 
@@ -84,6 +84,7 @@ class CandidateGroup {
   final List<String> candidateIds;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? color;
 
   CandidateGroup({
     required this.id,
@@ -93,6 +94,7 @@ class CandidateGroup {
     required this.candidateIds,
     required this.createdAt,
     required this.updatedAt,
+    this.color,
   });
 
   Map<String, dynamic> toJson() => {
@@ -103,6 +105,7 @@ class CandidateGroup {
     'candidate_ids': candidateIds,
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
+    'color': color,
   };
 
   factory CandidateGroup.fromJson(Map<String, dynamic> json) {
@@ -114,6 +117,7 @@ class CandidateGroup {
       candidateIds: List<String>.from(json['candidate_ids'] ?? []),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      color: json['color'] as String?,
     );
   }
 }

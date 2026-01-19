@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/candidate_model.dart';
 import '../models/exam_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/exam_provider.dart';
@@ -48,6 +49,9 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   final processes = ['Setup Exam', 'Question Generation', 'Question Distribution', 'Grading and Evaluation', 'Report Generation'];
   final List<IconData> processesIcons = [Icons.settings, Icons.auto_fix_high, Icons.send, Icons.grading, Icons.summarize];
   ProcessingStatus processingStatus = ProcessingStatus.idle;
+  String? selectedGroupId;
+  // List<Candidate> filteredCandidates = [];
+  // List<Candidate> unfilteredCandidates = [];
 
   Color getColor(int index) {
     if (index == processIndex) {
@@ -72,6 +76,29 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
       _showError('Failed to upload file: $e');
     }
   }
+
+  /*// Helper method to get group color
+  Color _getGroupColor(String groupId, CandidateProvider candidateProvider) {
+    // final candidateProvider = context.read<CandidateProvider>();
+    final group = candidateProvider.groups.firstWhere((g) => g.id == groupId);
+
+    final color = group.color;
+    if (color != null) {
+      return Color(int.parse(color.replaceFirst('#', '0xff')));
+    }
+
+    // Fallback colors based on group ID
+    final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.pink, Colors.teal];
+
+    return colors[groupId.hashCode % colors.length];
+  }
+
+  // Helper method to get group name
+  String _getGroupName(String groupId, CandidateProvider candidateProvider) {
+    // final candidateProvider = context.read<CandidateProvider>();
+    final group = candidateProvider.groups.firstWhere((g) => g.id == groupId);
+    return group.name ?? 'Unknown Group';
+  }*/
 
   @override
   void initState() {
@@ -234,6 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                 }
                 if (selectedIndex == 2) {
                   context.read<CandidateProvider>().fetchCandidates();
+                  context.read<CandidateProvider>().fetchGroups();
                 }
                 if (selectedIndex == 3) {
                   context.read<ExamBlueprintProvider>().fetchBlueprints();
@@ -357,7 +385,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                           top: MediaQuery.of(context).size.longestSide / 60,
                           right: MediaQuery.of(context).size.longestSide / 10,
                         ),
-                        child: SingleChildScrollView(
+                        child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: [
                             Column(
@@ -699,25 +727,122 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                       );
                                     }
 
-                                    return Column(
-                                      children: [
-                                        Wrap(
-                                          spacing: 16,
-                                          children: candidateProvider.groups.map((group) {
-                                            return ChoiceChip(label: Text(group.name), selected: false, onSelected: (item) {});
-                                          }).toList(),
-                                        ),
-                                        Column(
-                                          children: candidateProvider.candidates.map((file) {
-                                            return CandidateCard(
-                                              file: file,
-                                              onDelete: () {
-                                                candidateProvider.deleteCandidate(file.name);
+                                    return Expanded(
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('Filter by Group', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                                const SizedBox(height: 12),
+                                                Wrap(
+                                                  spacing: 12,
+                                                  runSpacing: 8,
+                                                  children: candidateProvider.groups.map((group) {
+                                                    final isSelected = selectedGroupId == group.id;
+
+                                                    return ChoiceChip(
+                                                      label: Text(group.name),
+                                                      selected: isSelected,
+                                                      onSelected: (bool selected) {
+                                                        setState(() {
+                                                          // Toggle selection - if already selected, deselect it
+                                                          selectedGroupId = selected ? group.id : null;
+                                                        });
+                                                      },
+                                                      selectedColor: Colors.cyan,
+                                                      backgroundColor: Colors.grey[200],
+                                                      labelStyle: TextStyle(
+                                                        color: isSelected ? Colors.white : Colors.black87,
+                                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                                      ),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                                // Clear filter button
+                                                if (selectedGroupId != null)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(top: 8),
+                                                    child: TextButton(
+                                                      onPressed: () {
+                                                        setState(() {
+                                                          selectedGroupId = null;
+                                                        });
+                                                      },
+                                                      child: const Text('Clear Filter'),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          const Divider(),
+                                          Expanded(
+                                            child: FutureBuilder(
+                                              future: candidateProvider.getCandidatesForGroup(selectedGroupId),
+                                              builder: (context, asyncSnapshot) {
+                                                if (asyncSnapshot.connectionState == ConnectionState.waiting) {
+                                                  return const Center(child: CircularProgressIndicator());
+                                                }
+                                                if (asyncSnapshot.hasError) {
+                                                  return Text('Error: ${asyncSnapshot.error}');
+                                                }
+                                                if (asyncSnapshot.hasData) {
+                                                  final filteredCandidates = asyncSnapshot.data ?? [];
+                                                  if (filteredCandidates.isEmpty || selectedGroupId == null) {
+                                                    return ListView.builder(
+                                                      padding: const EdgeInsets.all(16),
+                                                      itemCount: candidateProvider.candidates.length,
+                                                      itemBuilder: (context, index) {
+                                                        final candidate = candidateProvider.candidates[index];
+                                                        return CandidateCard(
+                                                          file: candidate,
+                                                          onDelete: () {
+                                                            candidateProvider.deleteCandidate(candidate.name);
+                                                          },
+                                                        );
+                                                      },
+                                                    );
+                                                  } else {
+                                                    return ListView.builder(
+                                                      padding: const EdgeInsets.all(16),
+                                                      itemCount: filteredCandidates.length,
+                                                      itemBuilder: (context, index) {
+                                                        final candidate = filteredCandidates[index];
+                                                        // final isHighlighted = selectedGroupId == candidate.id;
+                                                        // final groupColor = getGroupColor(candidate.id);
+                                                        // final groupName = getGroupName(candidate.id);
+
+                                                        return CandidateCard(
+                                                          file: candidate,
+                                                          // isHighlighted: isHighlighted,
+                                                          // groupColor: Colors.cyan,
+                                                          // groupName: candidateProvider.groups[index].name,
+                                                          onDelete: () {
+                                                            candidateProvider.deleteCandidate(candidate.name);
+                                                          },
+                                                        );
+                                                      },
+                                                    );
+                                                  }
+                                                }
+                                                return SizedBox.shrink();
                                               },
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ],
+                                            ),
+                                          ),
+                                          /* Column(
+                                            children: candidateProvider.candidates.map((file) {
+                                              return CandidateCard(
+                                                file: file,
+                                                onDelete: () {
+                                                  candidateProvider.deleteCandidate(file.name);
+                                                },
+                                              );
+                                            }).toList(),
+                                          ),*/
+                                        ],
+                                      ),
                                     );
                                   },
                                 ),

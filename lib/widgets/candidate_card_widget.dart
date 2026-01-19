@@ -39,7 +39,7 @@ class CandidateCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text(DateFormat('MMM d, yyyy').format(file.createdAt), style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                  Text(DateFormat('MMM d, yyyy').format(file.createdAt!), style: TextStyle(fontSize: 10, color: Colors.grey[500])),
                   const SizedBox(height: 2),
                   Text(file.email, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
                   const SizedBox(height: 2),
@@ -50,12 +50,12 @@ class CandidateCard extends StatelessWidget {
               ),
             ),
             /* Text(
-              file.name,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(width: 12),*/
+               file.name,
+               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+               maxLines: 1,
+               overflow: TextOverflow.ellipsis,
+             ),
+             const SizedBox(width: 12),*/
             ElevatedButton.icon(
               onPressed: onDelete,
               label: Icon(Icons.delete_outline, size: 18, color: Colors.white),

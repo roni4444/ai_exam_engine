@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -114,6 +115,45 @@ class CandidateProvider with ChangeNotifier {
       _error = e.toString();
       notifyListeners();
       rethrow;
+    }
+  }
+
+  Future<List<Candidate>> getCandidatesForGroup(String? groupId) async {
+    try {
+      if (groupId == null) return [];
+      // Query the junction table to get candidate IDs for this group
+      // Then join with candidates table to get full candidate details
+      final response = await _supabase
+          .from('candidate_group_members')
+          .select('''
+            candidates (
+              id,
+              name,
+              email,
+              phone,
+              roll_number,
+              created_at,
+              class,
+              section,
+              metadata,
+              user_id,
+              updated_at
+            )
+          ''')
+          .eq('group_id', groupId)
+          .order('assigned_at', ascending: true);
+
+      // Extract candidates from the nested response
+      final List<Candidate> candidates = [];
+
+      for (final item in response as List) {
+        if (item['candidates'] != null) {
+          candidates.add(Candidate.fromJson(item['candidates']));
+        }
+      }
+      return candidates;
+    } catch (error) {
+      throw Exception('Failed to fetch candidates for group: $error');
     }
   }
 

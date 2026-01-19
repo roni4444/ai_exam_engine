@@ -368,11 +368,24 @@ class _CreateCandidateGroupModalState extends State<CreateCandidateGroupModal> {
                         child: ElevatedButton(
                           onPressed: candidateProvider.isLoading
                               ? null
-                              : () => candidateProvider.createGroup(
-                                  name: _groupNameController.text.trim().titleCase,
-                                  description: _descriptionController.text.trim().sentenceCase,
-                                  candidateIds: selectedCandidateIds.toList(),
-                                ),
+                              : () async {
+                                  if (!_formKey.currentState!.validate()) return;
+                                  await candidateProvider.createGroup(
+                                    name: _groupNameController.text.trim().titleCase,
+                                    description: _descriptionController.text.trim().sentenceCase,
+                                    candidateIds: selectedCandidateIds.toList(),
+                                  );
+
+                                  if (context.mounted) {
+                                    // Show success message
+                                    ScaffoldMessenger.of(
+                                      context,
+                                    ).showSnackBar(const SnackBar(content: Text('Candidate added successfully'), backgroundColor: Colors.green));
+
+                                    // Close modal
+                                    Navigator.of(context).pop();
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
