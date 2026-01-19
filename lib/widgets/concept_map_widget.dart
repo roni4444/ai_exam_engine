@@ -4,7 +4,7 @@ import '../models/exam_config.dart';
 class ConceptMapWidget extends StatelessWidget {
   final List<ChapterConcept> concepts;
 
-  const ConceptMapWidget({Key? key, required this.concepts}) : super(key: key);
+  const ConceptMapWidget({super.key, required this.concepts});
 
   @override
   Widget build(BuildContext context) {

@@ -6,7 +6,7 @@ class SectionModal extends StatefulWidget {
   final ExamSection? section;
   final Function(ExamSection) onSave;
 
-  const SectionModal({Key? key, this.section, required this.onSave}) : super(key: key);
+  const SectionModal({super.key, this.section, required this.onSave});
 
   @override
   State<SectionModal> createState() => _SectionModalState();

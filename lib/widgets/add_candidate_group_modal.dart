@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:recase/recase.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/candidate_model.dart';
 import '../providers/candidate_provider.dart';

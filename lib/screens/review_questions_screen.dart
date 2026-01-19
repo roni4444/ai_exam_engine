@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/exam_provider.dart';
 import '../models/exam_models.dart';
 import '../widgets/question_card_widget.dart';
 import '../widgets/stat_card_widget.dart';

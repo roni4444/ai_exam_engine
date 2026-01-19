@@ -1,4 +1,3 @@
-import 'package:ai_exam_engine/providers/supabase_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/exam_models.dart';

@@ -454,7 +454,7 @@ class CandidateProvider with ChangeNotifier {
 
     for (final candidate in _candidates) {
       buffer.writeln(
-        '${_escapeCsv(candidate.name)},${_escapeCsv(candidate.email ?? '')},${_escapeCsv(candidate.rollNumber ?? '')},${_escapeCsv(candidate.class_ ?? '')},${_escapeCsv(candidate.section ?? '')}',
+        '${_escapeCsv(candidate.name)},${_escapeCsv(candidate.email)},${_escapeCsv(candidate.rollNumber ?? '')},${_escapeCsv(candidate.class_ ?? '')},${_escapeCsv(candidate.section ?? '')}',
       );
     }
 

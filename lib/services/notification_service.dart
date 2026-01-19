@@ -262,7 +262,7 @@ class NotificationService {
 
   Future<bool> getNotificationPermissionStatus() async {
     try {
-      final permission = await OneSignal.Notifications.permission;
+      final permission = OneSignal.Notifications.permission;
       return permission;
     } catch (e) {
       if (kDebugMode) {

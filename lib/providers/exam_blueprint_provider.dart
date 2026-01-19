@@ -85,7 +85,7 @@ class ExamBlueprintProvider with ChangeNotifier {
           .select()
           .single();
 
-      final createdBlueprint = ExamBlueprint.fromJson(response as Map<String, dynamic>);
+      final createdBlueprint = ExamBlueprint.fromJson(response);
       _blueprints.insert(0, createdBlueprint);
 
       _isLoading = false;
@@ -130,7 +130,7 @@ class ExamBlueprintProvider with ChangeNotifier {
 
       final response = await _supabase.from('exam_blueprints').update(updateData).eq('id', blueprintId).select().single();
 
-      final updatedBlueprint = ExamBlueprint.fromJson(response as Map<String, dynamic>);
+      final updatedBlueprint = ExamBlueprint.fromJson(response);
 
       final index = _blueprints.indexWhere((b) => b.id == blueprintId);
       if (index != -1) {
@@ -173,7 +173,7 @@ class ExamBlueprintProvider with ChangeNotifier {
     try {
       final response = await _supabase.from('exam_blueprints').select().eq('id', blueprintId).single();
 
-      return ExamBlueprint.fromJson(response as Map<String, dynamic>);
+      return ExamBlueprint.fromJson(response);
     } catch (e) {
       _error = e.toString();
       notifyListeners();

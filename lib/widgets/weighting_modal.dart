@@ -7,8 +7,7 @@ class WeightingModal extends StatefulWidget {
   final int importancePercentage;
   final Function(List<String>, int) onSave;
 
-  const WeightingModal({Key? key, required this.chapters, required this.importantChapters, required this.importancePercentage, required this.onSave})
-    : super(key: key);
+  const WeightingModal({super.key, required this.chapters, required this.importantChapters, required this.importancePercentage, required this.onSave});
 
   @override
   State<WeightingModal> createState() => _WeightingModalState();

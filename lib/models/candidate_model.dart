@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 /// Model for a candidate/student
 class Candidate {
@@ -64,7 +63,7 @@ class Candidate {
       userId: userId,
       name: name ?? this.name,
       email: email ?? this.email,
-      phone: phone ?? this.phone,
+      phone: phone ?? phone,
       rollNumber: rollNumber ?? this.rollNumber,
       class_: class_ ?? this.class_,
       section: section ?? this.section,

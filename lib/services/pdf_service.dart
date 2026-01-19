@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:pdf/pdf.dart' as pw_pdf;
 import 'package:pdf/widgets.dart' as pw;
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/foundation.dart';
 import '../models/exam_models.dart';
 

@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:ai_exam_engine/providers/candidate_provider.dart';
 import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
@@ -21,7 +20,6 @@ import 'providers/exam_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/supabase_provider.dart';
-import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
