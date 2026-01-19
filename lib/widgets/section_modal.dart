@@ -211,7 +211,10 @@ class _SectionModalState extends State<SectionModal> {
   Widget _buildSmallBadge(String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 255 * 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Text(
         label,
         style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),

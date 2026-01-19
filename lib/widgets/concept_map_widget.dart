@@ -34,7 +34,10 @@ class ConceptMapWidget extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: _getTypeColor(type).withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: _getTypeColor(type).withValues(alpha: 255 * 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Icon(_getTypeIcon(type), size: 14, color: _getTypeColor(type)),
               ),
               const SizedBox(width: 8),
@@ -68,7 +71,7 @@ class ConceptMapWidget extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 255 * 0.05), blurRadius: 10)],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
