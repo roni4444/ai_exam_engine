@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:recase/recase.dart';
 import '../models/exam_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/exam_provider.dart';
@@ -35,7 +36,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> with TickerProviderStateMixin {
-  // late TabController tabController;
+  TextEditingController nameController = TextEditingController();
   late PageController _pageViewController;
   List<ExamSection> sections = [];
   int selectedIndex = 0;
@@ -896,6 +897,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                 ),
                                 const SizedBox(height: 16),
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       child: Consumer<ExamBlueprintProvider>(
@@ -915,6 +917,8 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                           }
 
                                           return Column(
+                                            mainAxisSize: MainAxisSize.max,
+                                            mainAxisAlignment: MainAxisAlignment.start,
                                             children: examBlueprintProvider.blueprints.map((file) {
                                               return ExamBlueprintCard(
                                                 file: file,
@@ -927,6 +931,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                         },
                                       ),
                                     ),
+                                    SizedBox(width: 10),
                                     Expanded(
                                       child: Container(
                                         height: 700,
@@ -1049,6 +1054,30 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
               _buildBadge('$totalQuestions Qs', const Color(0xFFE2E8F0), const Color(0xFF334155)),
               const SizedBox(width: 8),
               _buildBadge('$totalMarks Pts', const Color(0xFF8B5CF6), Colors.white),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Flexible(
+                child: TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: "Blueprint Name",
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFF2563EB), width: 4),
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                ),
+              ),
             ],
           ),
         ],
@@ -1228,6 +1257,30 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
               ],
             ),
           ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: qt.bloomsDistribution.map((bloom) {
+              if (bloom.count != 0) {
+                return Card.outlined(
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("${bloom.level}:", style: TextStyle(color: Colors.grey)),
+                        Text("${bloom.count}", style: TextStyle(color: Colors.black)),
+                      ],
+                    ),
+                  ),
+                );
+              } else {
+                return SizedBox.shrink();
+              }
+            }).toList(),
+          ),
         ],
       ),
     );
@@ -1294,35 +1347,50 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   }
 
   Widget _buildBlueprintFooter() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        border: Border(top: BorderSide(color: Colors.grey.shade100)),
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2563EB),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 10,
-            shadowColor: const Color(0xFF2563EB).withValues(alpha: 255 * 0.3),
+    return Consumer<ExamBlueprintProvider>(
+      builder: (context, examBlueprintProvider, _) {
+        if (examBlueprintProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            border: Border(top: BorderSide(color: Colors.grey.shade100)),
           ),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: sections.isEmpty
+                  ? null
+                  : () async {
+                      if (nameController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a section name')));
+                        return;
+                      }
+                      await examBlueprintProvider.createBlueprint(name: nameController.text.trim().titleCase, sections: sections);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 10,
+                shadowColor: const Color(0xFF2563EB).withValues(alpha: 255 * 0.3),
+              ),
 
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Text('Save Blueprint', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-              SizedBox(width: 8),
-              Icon(Icons.arrow_forward, size: 20),
-            ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Text('Save Blueprint', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward, size: 20),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

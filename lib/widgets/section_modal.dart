@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/exam_config.dart';
 import '../utils/question_types.dart';
 
@@ -14,14 +16,28 @@ class SectionModal extends StatefulWidget {
 
 class _SectionModalState extends State<SectionModal> {
   late TextEditingController _nameController;
+  late List<TextEditingController> _marksController;
+  late List<TextEditingController> _negativeMarksController;
   late List<QuestionTypeConfig> _questionTypes;
+  late List<BloomsDistribution> _bloomsSelectionList;
+  ExpansibleController controller = ExpansibleController();
+
   int? _expandedTypeIdx;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.section?.name ?? 'Section ${String.fromCharCode(65)}');
+    _marksController = List.generate(
+      QuestionTypes.types.length,
+      (index) => TextEditingController(text: widget.section?.questionTypes[index].marks.toString() ?? '1'),
+    );
+    _negativeMarksController = List.generate(
+      QuestionTypes.types.length,
+      (index) => TextEditingController(text: widget.section?.questionTypes[index].negativeValue.toString() ?? '0'),
+    );
     _questionTypes = widget.section?.questionTypes ?? _createInitialTypes();
+    _bloomsSelectionList = List.generate(bloomsLevel.length, (index) => BloomsDistribution(level: bloomsLevel.elementAt(index), count: 0));
   }
 
   List<QuestionTypeConfig> _createInitialTypes() {
@@ -36,6 +52,8 @@ class _SectionModalState extends State<SectionModal> {
       );
     }).toList();
   }
+
+  final List<String> bloomsLevel = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
 
   @override
   Widget build(BuildContext context) {
@@ -234,30 +252,233 @@ class _SectionModalState extends State<SectionModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (qt.type != 'Scenario Based') ...[
-            Row(
+            Column(
               children: [
-                Expanded(
-                  child: _buildDifficultyControl('Easy', qt.count.easy, (val) {
-                    setState(() {
-                      _questionTypes[index] = qt.copyWith(count: qt.count.copyWith(easy: val));
-                    });
-                  }),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildDifficultyControl('Easy', qt.count.easy, (val) {
+                        setState(() {
+                          _questionTypes[index] = qt.copyWith(count: qt.count.copyWith(easy: val));
+                        });
+                      }),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildDifficultyControl('Medium', qt.count.medium, (val) {
+                        setState(() {
+                          _questionTypes[index] = qt.copyWith(count: qt.count.copyWith(medium: val));
+                        });
+                      }),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildDifficultyControl('Hard', qt.count.hard, (val) {
+                        setState(() {
+                          _questionTypes[index] = qt.copyWith(count: qt.count.copyWith(hard: val));
+                        });
+                      }),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildDifficultyControl('Medium', qt.count.medium, (val) {
-                    setState(() {
-                      _questionTypes[index] = qt.copyWith(count: qt.count.copyWith(medium: val));
-                    });
-                  }),
+                SizedBox(height: 10),
+                Divider(),
+                SizedBox(height: 10),
+                ListTile(
+                  leading: Icon(Icons.track_changes, color: Colors.blue),
+                  title: Text("Per Question Marks"),
+                  trailing: SizedBox(
+                    width: 100,
+                    child: TextField(
+                      maxLength: 3,
+                      maxLengthEnforcement: MaxLengthEnforcement.truncateAfterCompositionEnds,
+                      controller: _marksController.elementAt(index),
+                      textAlign: TextAlign.center,
+                      decoration: InputDecoration(
+                        counterText: "",
+                        border: InputBorder.none,
+                        hintText: '1',
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          _questionTypes[index] = qt.copyWith(
+                            marks: _marksController.elementAt(index).text == '' ? 1 : int.parse(_marksController.elementAt(index).text),
+                          );
+                        });
+                      },
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildDifficultyControl('Hard', qt.count.hard, (val) {
-                    setState(() {
-                      _questionTypes[index] = qt.copyWith(count: qt.count.copyWith(hard: val));
-                    });
-                  }),
+                SizedBox(height: 16),
+                ListTile(
+                  leading: Icon(Icons.remove_circle_outline, color: Colors.orangeAccent),
+                  title: Text("Negative Marking"),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Switch(
+                        value: qt.negativeMarks,
+                        activeThumbColor: Colors.red,
+                        onChanged: (val) {
+                          setState(() {
+                            _questionTypes[index] = qt.copyWith(negativeMarks: val);
+                          });
+                        },
+                      ),
+                      if (qt.negativeMarks)
+                        SizedBox(
+                          width: 100,
+                          child: TextField(
+                            controller: _negativeMarksController.elementAt(index),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.red),
+                            decoration: InputDecoration(
+                              counterText: "",
+                              border: InputBorder.none,
+                              hintText: '1',
+                              hintStyle: TextStyle(color: Colors.grey[600]),
+                            ),
+                            onChanged: (val) {
+                              setState(() {
+                                _questionTypes[index] = qt.copyWith(
+                                  negativeValue: _negativeMarksController.elementAt(index).text == ''
+                                      ? 0.25
+                                      : double.parse(_negativeMarksController.elementAt(index).text),
+                                );
+                              });
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+                ListTile(
+                  leading: Icon(Icons.auto_awesome, color: Colors.teal),
+                  title: Text("OR Alternatives (Pairs)"),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        iconSize: 24,
+                        color: const Color(0xFF64748B),
+                        onPressed: () {
+                          setState(() {
+                            _questionTypes[index] = qt.copyWith(
+                              orCount: (_questionTypes[index].orCount - 1).clamp(
+                                0,
+                                _questionTypes[index].count.easy + _questionTypes[index].count.medium + _questionTypes[index].count.hard,
+                              ),
+                            );
+                          });
+                        },
+                      ),
+                      Text(
+                        _questionTypes[index].orCount.toString(),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'monospace', color: Color(0xFF334155)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        iconSize: 24,
+                        color: const Color(0xFF64748B),
+                        onPressed: () {
+                          setState(() {
+                            _questionTypes[index] = qt.copyWith(
+                              orCount: (_questionTypes[index].orCount + 1).clamp(
+                                0,
+                                _questionTypes[index].count.easy + _questionTypes[index].count.medium + _questionTypes[index].count.hard,
+                              ),
+                            );
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+                Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    initiallyExpanded: true,
+                    showTrailingIcon: false,
+                    controller: controller,
+                    onExpansionChanged: (val) {
+                      setState(() {
+                        if (!val) {
+                          controller.expand();
+                        }
+                      });
+                    },
+                    leading: Icon(Icons.psychology_outlined, color: Colors.deepPurpleAccent),
+                    title: Text("Bloom's Taxonomy Counts"),
+                    children: bloomsLevel
+                        .map(
+                          (level) => ListTile(
+                            title: Text(level.toString()),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline),
+                                  iconSize: 24,
+                                  color: const Color(0xFF64748B),
+                                  onPressed: () {
+                                    setState(() {
+                                      final bloom = _bloomsSelectionList.firstWhere((element) => element.level.compareTo(level) == 0);
+                                      final loc = _bloomsSelectionList.indexOf(bloom);
+                                      final originalCount = _bloomsSelectionList[loc].count;
+                                      final int totalBloomsCount = _bloomsSelectionList.fold(0, (sum, item) => sum + item.count);
+                                      if (totalBloomsCount > 0 && originalCount >= 1) {
+                                        final updatedCount = (originalCount - 1);
+                                        _bloomsSelectionList = List.from(_bloomsSelectionList)
+                                          ..[loc] = BloomsDistribution(level: bloom.level, count: updatedCount);
+                                        _questionTypes[index] = qt.copyWith(bloomsDistribution: _bloomsSelectionList);
+                                      }
+                                    });
+                                  },
+                                ),
+                                Text(
+                                  _bloomsSelectionList.firstWhere((element) => element.level.compareTo(level) == 0).count.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: 'monospace',
+                                    color: Color(0xFF334155),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  iconSize: 24,
+                                  color: const Color(0xFF64748B),
+                                  onPressed: () {
+                                    setState(() {
+                                      final bloom = _bloomsSelectionList.firstWhere((element) => element.level.compareTo(level) == 0);
+                                      final loc = _bloomsSelectionList.indexOf(bloom);
+                                      final originalCount = _bloomsSelectionList[loc].count;
+                                      final int totalBloomsCount = _bloomsSelectionList.fold(0, (sum, item) => sum + item.count);
+                                      final int maxQuestions =
+                                          _questionTypes[index].count.easy + _questionTypes[index].count.medium + _questionTypes[index].count.hard;
+                                      if (totalBloomsCount < maxQuestions) {
+                                        final updatedCount = (originalCount + 1);
+                                        _bloomsSelectionList = List.from(_bloomsSelectionList)
+                                          ..[loc] = BloomsDistribution(level: bloom.level, count: updatedCount);
+                                        _questionTypes[index] = qt.copyWith(bloomsDistribution: _bloomsSelectionList);
+                                      }
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+
+                    /*(_bloomsSelectionList.isEmpty)
+                        ? [Text("No specific cognitive targets set (Balanced distribution)")]
+                        : _bloomsSelectionList*/
+                  ),
                 ),
               ],
             ),
