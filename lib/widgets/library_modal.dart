@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/supabase_provider.dart';
 
 class LibraryModal extends StatefulWidget {
-  final Function(String fileName, String? fullPath) onSelect;
+  final Function(String fileName) onSelect;
 
   const LibraryModal({super.key, required this.onSelect});
 
@@ -179,7 +179,13 @@ class _LibraryModalState extends State<LibraryModal> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 255 * 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -314,6 +320,7 @@ class _LibraryModalState extends State<LibraryModal> {
             itemBuilder: (context, index) {
               final file = _files[index];
               final fileName = file.name ?? '';
+              // final filePath = file.path ?? '';
               final isDeleting = _deletingFile == fileName;
 
               return _buildFileCard(fileName, file, isDeleting);
@@ -330,16 +337,22 @@ class _LibraryModalState extends State<LibraryModal> {
       opacity: isDeleting ? 0.6 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: InkWell(
-        onTap: isDeleting ? null : () => widget.onSelect(fileName, fileName),
+        onTap: isDeleting ? null : () => widget.onSelect(fileName),
         borderRadius: BorderRadius.circular(12),
-        hoverColor: const Color(0xFFDEEBFF).withOpacity(0.5),
+        hoverColor: const Color(0xFFDEEBFF).withValues(alpha: 255 * 0.5),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: isDeleting ? Colors.grey.shade200 : Colors.grey.shade200, width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 255 * 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Stack(
             clipBehavior: Clip.none,
@@ -421,7 +434,7 @@ class _LibraryModalState extends State<LibraryModal> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6)],
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 255 * 0.1), blurRadius: 6)],
                         ),
                         child: const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)),
                       )
@@ -437,7 +450,13 @@ class _LibraryModalState extends State<LibraryModal> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: Colors.grey.shade200, width: 1.5),
-                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 2))],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 255 * 0.06),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Icon(Icons.close, size: 14, color: Colors.grey.shade400),
                           ),

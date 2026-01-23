@@ -1,13 +1,7 @@
-
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
-import 'dart:typed_data';
 import '../models/exam_config.dart';
 import '../providers/supabase_provider.dart';
-import '../services/pdf_service.dart';
-import '../services/gemini_service.dart';
-// import '../services/db_service.dart';
 import '../widgets/concept_map_widget.dart';
 import '../widgets/section_modal.dart';
 import '../widgets/weighting_modal.dart';
@@ -27,7 +21,7 @@ class SetupScreen extends StatefulWidget {
 class _SetupScreenState extends State<SetupScreen> {
   ProcessingStatus _processingStatus = ProcessingStatus.idle;
   List<AnalyzedChapter> _analyzedChapters = [];
-  String _sourceText = '';
+  String sourceText = '';
 
   String _examName = 'Exam';
   int _studentCount = 3;
@@ -203,7 +197,7 @@ class _SetupScreenState extends State<SetupScreen> {
           IconButton(
             icon: const Icon(Icons.upload_file, size: 16),
             color: const Color(0xFF2563EB),
-            onPressed: _handleFileUpload,
+            onPressed: null, //_handleFileUpload,
             tooltip: 'Upload PDF',
           ),
         ],
@@ -226,9 +220,9 @@ class _SetupScreenState extends State<SetupScreen> {
   Widget _buildUploadPrompt() {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          InkWell(
+          /*InkWell(
             onTap: _handleFileUpload,
             child: Container(
               padding: const EdgeInsets.all(24),
@@ -270,7 +264,7 @@ class _SetupScreenState extends State<SetupScreen> {
               const Expanded(child: Divider()),
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 32),*/
           ElevatedButton.icon(
             onPressed: _openLibrary,
             icon: const Icon(Icons.photo_library, size: 16),
@@ -1080,7 +1074,7 @@ class _SetupScreenState extends State<SetupScreen> {
     }
   }
 
-  Future<void> _handleFileUpload() async {
+  /*Future<void> _handleFileUpload() async {
     try {
       final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
 
@@ -1125,7 +1119,7 @@ class _SetupScreenState extends State<SetupScreen> {
       _showError('Failed to process PDF: $e');
       setState(() => _processingStatus = ProcessingStatus.idle);
     }
-  }
+  }*/
 
   Future<void> _handleBulkUpload() async {
     // TODO: Implement CSV/XLSX import
@@ -1144,30 +1138,29 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
-  Future<void> _handleSelectFromLibrary(String fileName, String? fullPath) async {
+  Future<void> _handleSelectFromLibrary(String fileName) async {
     Navigator.of(context).pop();
-    final dbService = context.read<SupabaseProvider>();
-    if (fullPath != null) {
-      final metadata = await dbService.getLibraryMetadata(fullPath);
-      if (metadata != null && metadata['chapters'] != null && metadata['extracted_text'] != null) {
-        setState(() {
-          _sourceText = metadata['extracted_text'];
-          _analyzedChapters = (metadata['chapters'] as List).map((c) => AnalyzedChapter.fromJson(c)).toList();
-          _examName = metadata['title_suggestion'] ?? 'Exam from Library';
-          _processingStatus = ProcessingStatus.completed;
-        });
-        return;
-      }
-    }
-
+    final supabase = context.read<SupabaseProvider>();
+    final user = supabase.client.auth.currentSession?.user.id;
+    if (user == null) return;
+    // final fullPath = 'library/$user/$fileName';
+    final metadata = await supabase.client.from("chapters").select("title, concepts").eq("user_id", user).eq("file_name", fileName);
+    setState(() {
+      // _sourceText = metadata['extracted_text'];
+      _analyzedChapters = (metadata as List).map((c) => AnalyzedChapter.fromJson(c)).toList();
+      // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
+      _processingStatus = ProcessingStatus.completed;
+    });
+    return;
+    /*
     try {
       setState(() => _processingStatus = ProcessingStatus.extracting);
-      final bytes = await dbService.downloadLibraryFile(fileName);
+      final bytes = await supabase.downloadLibraryFile(fileName);
       await _processPdfData(bytes);
     } catch (e) {
       _showError('Failed to load from library: $e');
       setState(() => _processingStatus = ProcessingStatus.idle);
-    }
+    }*/
   }
 
   void _openWeightingModal() {
@@ -1234,7 +1227,7 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   void _handleStartClick() {
-    if (_sourceText.isNotEmpty && sections.isNotEmpty) {
+    if (sourceText.isNotEmpty && sections.isNotEmpty) {
       final config = ExamConfig(
         examName: _examName,
         studentCount: _studentCount,
@@ -1244,7 +1237,7 @@ class _SetupScreenState extends State<SetupScreen> {
         importancePercentage: _importancePercentage,
       );
 
-      widget.onStart?.call(_sourceText, config, _analyzedChapters);
+      widget.onStart?.call(sourceText, config, _analyzedChapters);
     }
   }
 

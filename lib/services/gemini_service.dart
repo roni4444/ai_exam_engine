@@ -8,7 +8,7 @@ import '../config/gemini_config.dart';
 import '../models/exam_models.dart';
 
 class GeminiService {
-  static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+  // static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
   // final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-2.5-flash');
   static final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-3-flash-preview');
@@ -143,7 +143,7 @@ class GeminiService {
     }
   }*/
 
-  static Future<Map<String, dynamic>> _makeRequest({
+  /*static Future<Map<String, dynamic>> _makeRequest({
     required String prompt,
     String model = 'gemini-3-flash-preview',
     bool useJson = false,
@@ -190,7 +190,7 @@ class GeminiService {
     }
     throw Exception('Max retries exceeded');
   }
-
+*/
   static dynamic _cleanAndParseJson(String text) {
     try {
       // Remove markdown code blocks
@@ -224,9 +224,10 @@ class GeminiService {
     }
   }
 
+  /*
   static Future<String> detectLanguage(String text) async {
     try {
-      final prompt = '''Identify the primary language of this text. 
+      final prompt = '''Identify the primary language of this text.
 Return ONLY the language name (e.g., English, Bengali, Hindi, Spanish).
 Text: ${text.substring(0, 500)}''';
 
@@ -237,10 +238,12 @@ Text: ${text.substring(0, 500)}''';
       return 'English';
     }
   }
+*/
+  /*
 
   static Future<String> translateToEnglish(String text) async {
     try {
-      final prompt = '''Translate the following text to English. 
+      final prompt = '''Translate the following text to English.
 Preserve any HTML tags, LaTeX math expressions (keep \$ delimiters), and formatting exactly.
 Text: $text''';
 
@@ -251,8 +254,9 @@ Text: $text''';
       return text;
     }
   }
+*/
 
-  static Future<String> suggestExamTitle(String text) async {
+  /*  static Future<String> suggestExamTitle(String text) async {
     try {
       final prompt = '''Based on this educational content, suggest a professional exam title.
 Return ONLY the title, nothing else.
@@ -264,9 +268,9 @@ Content: ${text.substring(0, 2000)}''';
       if (kDebugMode) print('Title suggestion error: $e');
       return 'Exam';
     }
-  }
+  }*/
 
-  static Future<List<AnalyzedChapter>> analyzeChapterContent(String text, Function(String)? onStatusUpdate) async {
+  /*static Future<List<AnalyzedChapter>> analyzeChapterContent(String text, Function(String)? onStatusUpdate) async {
     try {
       if (onStatusUpdate != null) onStatusUpdate('analyzing');
 
@@ -306,9 +310,9 @@ Text (first 50000 characters): ${text.substring(0, text.length > 50000 ? 50000 :
       if (kDebugMode) print('Chapter analysis error: $e');
       rethrow;
     }
-  }
+  }*/
 
-  static Future<Map<String, dynamic>> processFullDocument(String rawText, Function(String)? onStatusUpdate) async {
+  /*  static Future<Map<String, dynamic>> processFullDocument(String rawText, Function(String)? onStatusUpdate) async {
     try {
       // Detect language
       if (onStatusUpdate != null) onStatusUpdate('detecting_language');
@@ -334,9 +338,9 @@ Text (first 50000 characters): ${text.substring(0, text.length > 50000 ? 50000 :
       if (kDebugMode) print('Document processing error: $e');
       rethrow;
     }
-  }
+  }*/
 
-  static Future<List<Question>> generateQuestionsFromConcepts({
+  /*static Future<List<Question>> generateQuestionsFromConcepts({
     required List<AnalyzedChapter> chapters,
     required Map<String, dynamic> config,
     Function(int, int)? onProgress,
@@ -434,8 +438,8 @@ Return JSON array:
       rethrow;
     }
   }
-
-  static Future<List<Question>> translateQuestions(List<Question> questions, String targetLanguage) async {
+*/
+  /*static Future<List<Question>> translateQuestions(List<Question> questions, String targetLanguage) async {
     if (targetLanguage == 'English') return questions;
 
     try {
@@ -487,9 +491,9 @@ Questions: ${jsonEncode(batch.map((q) => {'id': q.id, 'text': q.text, 'options':
       if (kDebugMode) print('Translation error: $e');
       return questions;
     }
-  }
+  }*/
 
-  static Future<Map<String, dynamic>> gradeAnswerImage({required Question question, required String imageBase64}) async {
+  /*  static Future<Map<String, dynamic>> gradeAnswerImage({required Question question, required String imageBase64}) async {
     try {
       // Remove data:image prefix if present
       final base64Data = imageBase64.contains(',') ? imageBase64.split(',')[1] : imageBase64;
@@ -552,5 +556,5 @@ Return JSON:
         'result': {'score': 0, 'maxScore': question.marks, 'breakdown': [], 'feedback': 'Service error during grading'},
       };
     }
-  }
+  }*/
 }
