@@ -1,3 +1,6 @@
+import 'package:ai_exam_engine/models/candidate_model.dart';
+import 'package:ai_exam_engine/providers/candidate_provider.dart';
+import 'package:ai_exam_engine/widgets/candidate_selection_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/exam_config.dart';
@@ -19,8 +22,10 @@ class SetupScreen extends StatefulWidget {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
-  ProcessingStatus _processingStatus = ProcessingStatus.idle;
+  ProcessingStatus _libraryProcessingStatus = ProcessingStatus.idle;
+  ProcessingStatus _candidateProcessingStatus = ProcessingStatus.idle;
   List<AnalyzedChapter> _analyzedChapters = [];
+  List<Candidate> _fetchedCandidates = [];
   String sourceText = '';
 
   String _examName = 'Exam';
@@ -129,7 +134,7 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Color _getStatusColor() {
-    switch (_processingStatus) {
+    switch (_libraryProcessingStatus) {
       case ProcessingStatus.completed:
         return const Color(0xFF22C55E);
       case ProcessingStatus.idle:
@@ -140,7 +145,7 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   String _getStatusText() {
-    switch (_processingStatus) {
+    switch (_libraryProcessingStatus) {
       case ProcessingStatus.completed:
         return 'Analysis Ready';
       case ProcessingStatus.idle:
@@ -187,7 +192,7 @@ class _SetupScreenState extends State<SetupScreen> {
             'Source Material',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
           ),
-          const Spacer(),
+          /*const Spacer(),
           IconButton(
             icon: const Icon(Icons.photo_library, size: 16),
             color: const Color(0xFF6366F1),
@@ -199,22 +204,37 @@ class _SetupScreenState extends State<SetupScreen> {
             color: const Color(0xFF2563EB),
             onPressed: null, //_handleFileUpload,
             tooltip: 'Upload PDF',
-          ),
+          ),*/
         ],
       ),
     );
   }
 
   Widget _buildSourceContent() {
-    if (_processingStatus == ProcessingStatus.idle) {
+    if (_libraryProcessingStatus == ProcessingStatus.idle) {
       return _buildUploadPrompt();
     }
 
-    if (_processingStatus != ProcessingStatus.completed) {
+    if (_libraryProcessingStatus != ProcessingStatus.completed) {
       return _buildProcessingIndicator();
     }
 
     return _buildAnalyzedContent();
+  }
+
+  Widget _buildCandidateList() {
+    if (_candidateProcessingStatus == ProcessingStatus.idle) {
+      return _buildStudentListSection();
+    }
+
+    if (_candidateProcessingStatus != ProcessingStatus.completed) {
+      return _buildProcessingIndicator();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: SingleChildScrollView(child: Column(children: _buildStudentNameFields())),
+    );
   }
 
   Widget _buildUploadPrompt() {
@@ -293,14 +313,14 @@ class _SetupScreenState extends State<SetupScreen> {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
           ),
           const SizedBox(height: 8),
-          const Text('Please wait while we process your document.', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8))),
+          const Text('Please wait while we process your selection.', style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8))),
         ],
       ),
     );
   }
 
   String _getProcessingMessage() {
-    switch (_processingStatus) {
+    switch (_libraryProcessingStatus) {
       case ProcessingStatus.extracting:
         return 'Extracting Text...';
       case ProcessingStatus.translating:
@@ -456,11 +476,13 @@ class _SetupScreenState extends State<SetupScreen> {
         children: [
           _buildConfigHeader(),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [_buildExamNameField(), const SizedBox(height: 32), _buildStudentCountSection()],
+                children: [
+                  _buildExamNameField(),
+                  Expanded(child: _buildCandidateList()),
+                ],
               ),
             ),
           ),
@@ -520,6 +542,29 @@ class _SetupScreenState extends State<SetupScreen> {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF0F172A)),
         ),
       ],
+    );
+  }
+
+  Widget _buildStudentListSection() {
+    return Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton.icon(
+            onPressed: _openGroupList,
+            icon: const Icon(Icons.photo_library, size: 16),
+            label: const Text('Select from Group List'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6366F1),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -634,7 +679,7 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   List<Widget> _buildStudentNameFields() {
-    return List.generate(_studentNames.length, (index) {
+    return List.generate(_fetchedCandidates.length, (index) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(
@@ -644,27 +689,41 @@ class _SetupScreenState extends State<SetupScreen> {
               alignment: Alignment.center,
               child: Text(
                 '${index + 1}',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade300),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade800),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: TextField(
-                controller: TextEditingController(text: _studentNames[index]),
-                onChanged: (value) => _handleStudentNameChange(index, value),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
+              child: Card(
+                color: const Color(0xFFF8FAFC),
+                shape: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Text(
+                    _fetchedCandidates[index].name,
+                    /*decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),*/
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(icon: const Icon(Icons.delete_outline, size: 14), color: Colors.grey.shade300, onPressed: () => _removeStudent(index)),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 14),
+              color: Colors.grey.shade700,
+              onPressed: () => _removeStudent(index),
+              hoverColor: Colors.red,
+            ),
           ],
         ),
       );
@@ -989,7 +1048,7 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Widget _buildBlueprintFooter() {
-    final canStart = _processingStatus == ProcessingStatus.completed && sections.isNotEmpty;
+    final canStart = _libraryProcessingStatus == ProcessingStatus.completed && sections.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -1066,10 +1125,10 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   void _removeStudent(int index) {
-    if (_studentNames.length > 1) {
+    if (_fetchedCandidates.length > 1) {
       setState(() {
-        _studentNames.removeAt(index);
-        _studentCount = _studentNames.length;
+        _fetchedCandidates.removeAt(index);
+        // _studentCount = _studentNames.length;
       });
     }
   }
@@ -1138,6 +1197,13 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
+  void _openGroupList() {
+    showDialog(
+      context: context,
+      builder: (context) => CandidateSelectionModal(onSelect: _handleSelectFromGroup),
+    );
+  }
+
   Future<void> _handleSelectFromLibrary(String fileName) async {
     Navigator.of(context).pop();
     final supabase = context.read<SupabaseProvider>();
@@ -1145,22 +1211,32 @@ class _SetupScreenState extends State<SetupScreen> {
     if (user == null) return;
     // final fullPath = 'library/$user/$fileName';
     final metadata = await supabase.client.from("chapters").select("title, concepts").eq("user_id", user).eq("file_name", fileName);
+    if (metadata.isEmpty) return;
     setState(() {
       // _sourceText = metadata['extracted_text'];
       _analyzedChapters = (metadata as List).map((c) => AnalyzedChapter.fromJson(c)).toList();
       // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
-      _processingStatus = ProcessingStatus.completed;
+      _libraryProcessingStatus = ProcessingStatus.completed;
     });
     return;
-    /*
-    try {
-      setState(() => _processingStatus = ProcessingStatus.extracting);
-      final bytes = await supabase.downloadLibraryFile(fileName);
-      await _processPdfData(bytes);
-    } catch (e) {
-      _showError('Failed to load from library: $e');
-      setState(() => _processingStatus = ProcessingStatus.idle);
-    }*/
+  }
+
+  Future<void> _handleSelectFromGroup(String groupName) async {
+    Navigator.of(context).pop();
+    final supabase = context.read<SupabaseProvider>();
+    final candid = context.read<CandidateProvider>();
+    final user = supabase.client.auth.currentSession?.user.id;
+    if (user == null) return;
+    // final fullPath = 'library/$user/$fileName';
+    final candidates = await candid.getCandidatesForGroup(groupName);
+    // final metadata = await supabase.client.from("chapters").select("title, concepts").eq("user_id", user).eq("file_name", groupName);
+    setState(() {
+      // _sourceText = metadata['extracted_text'];
+      _fetchedCandidates = candidates;
+      // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
+      _candidateProcessingStatus = ProcessingStatus.completed;
+    });
+    return;
   }
 
   void _openWeightingModal() {

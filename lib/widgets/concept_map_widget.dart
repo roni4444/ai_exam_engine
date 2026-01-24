@@ -38,7 +38,7 @@ class ConceptMapWidget extends StatelessWidget {
                   color: _getTypeColor(type).withValues(alpha: 255 * 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(_getTypeIcon(type), size: 14, color: _getTypeColor(type)),
+                child: Icon(_getTypeIcon(type), size: 14, color: Colors.white),
               ),
               const SizedBox(width: 8),
               Text(
@@ -90,8 +90,8 @@ class ConceptMapWidget extends StatelessWidget {
                   concept.name,
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
                 ),
-                const SizedBox(height: 4),
-                Text(concept.description, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.5)),
+                /*const SizedBox(height: 4),
+                Text(concept.description, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.5)),*/
               ],
             ),
           ),
