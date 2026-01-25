@@ -60,7 +60,10 @@ class ExamProvider with ChangeNotifier {
       if (userId == null) return;
 
       final response = await _supabase.from('exams').select().eq('user_id', userId).order('created_at', ascending: false).limit(5);
-      _recentExams = (response as List).map((e) => ExamRecord.fromJson(e)).toList();
+      if (kDebugMode) {
+        print(response);
+      }
+      _recentExams = (response.where((test) => test['state'] != null) as List).map((e) => ExamRecord.fromJson(e)).toList();
     } catch (e) {
       _errorMessage = e.toString();
     } finally {

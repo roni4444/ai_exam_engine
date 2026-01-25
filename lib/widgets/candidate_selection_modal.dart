@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/supabase_provider.dart';
 
 class CandidateSelectionModal extends StatefulWidget {
-  final Function(String fileName) onSelect;
+  final Function(String candidateGroupId) onSelect;
 
   const CandidateSelectionModal({super.key, required this.onSelect});
 

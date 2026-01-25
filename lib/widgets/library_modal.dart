@@ -1,10 +1,11 @@
+import 'package:ai_exam_engine/models/exam_models.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/supabase_provider.dart';
 
 class LibraryModal extends StatefulWidget {
-  final Function(String fileName) onSelect;
+  final Function(String fileName, String fileId) onSelect;
 
   const LibraryModal({super.key, required this.onSelect});
 
@@ -320,10 +321,10 @@ class _LibraryModalState extends State<LibraryModal> {
             itemBuilder: (context, index) {
               final file = _files[index];
               final fileName = file.name ?? '';
-              // final filePath = file.path ?? '';
+              final fileId = file.id ?? '';
               final isDeleting = _deletingFile == fileName;
 
-              return _buildFileCard(fileName, file, isDeleting);
+              return _buildFileCard(fileName, file, isDeleting, fileId);
             },
           ),
         ),
@@ -332,12 +333,12 @@ class _LibraryModalState extends State<LibraryModal> {
   }
 
   /// Build individual file card
-  Widget _buildFileCard(String fileName, dynamic file, bool isDeleting) {
+  Widget _buildFileCard(String fileName, dynamic file, bool isDeleting, String fileId) {
     return AnimatedOpacity(
       opacity: isDeleting ? 0.6 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: InkWell(
-        onTap: isDeleting ? null : () => widget.onSelect(fileName),
+        onTap: isDeleting ? null : () => widget.onSelect(fileName, fileId),
         borderRadius: BorderRadius.circular(12),
         hoverColor: const Color(0xFFDEEBFF).withValues(alpha: 255 * 0.5),
         child: Container(

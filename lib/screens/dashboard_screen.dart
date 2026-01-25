@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:recase/recase.dart';
+import '../models/candidate_model.dart';
 import '../models/exam_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/exam_provider.dart';
@@ -483,7 +484,10 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                                       const SizedBox(height: 16),
                                                       TextButton(
                                                         onPressed: () {
-                                                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SetupScreen()));
+                                                          // Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SetupScreen()));
+                                                          setState(() {
+                                                            _pageViewController.jumpToPage(1);
+                                                          });
                                                         },
                                                         child: const Text('Get Started'),
                                                       ),
@@ -957,7 +961,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                           ][selectedIndex],
                         ),
                       ),
-                      SetupScreen(),
+                      SetupScreen(onNext: onSetupScreenNext),
                       ReviewQuestionsScreen(),
                     ],
                   ),
@@ -1542,6 +1546,23 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
 
   void _showInfo(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> onSetupScreenNext({required List<Candidate> candidates, required ExamConfig config, required List<AnalyzedChapter> chapters}) async {
+    Navigator.of(context).pop();
+    final supabase = context.read<SupabaseProvider>();
+    final user = supabase.client.auth.currentSession?.user.id;
+    if (user == null) return;
+    // final fullPath = 'library/$user/$fileName';
+    // final metadata = await supabase.client.from("chapters").select("title, concepts").eq("user_id", user).eq("file_name", fileName);
+    // if (metadata.isEmpty) return;
+    setState(() {
+      // _sourceText = metadata['extracted_text'];
+      // _analyzedChapters = (metadata as List).map((c) => AnalyzedChapter.fromJson(c)).toList();
+      // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
+      // _libraryProcessingStatus = ProcessingStatus.completed;
+    });
+    return;
   }
 }
 

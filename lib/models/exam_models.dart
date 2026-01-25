@@ -209,7 +209,12 @@ class ExamRecord {
   ExamRecord({required this.id, required this.name, required this.state, required this.createdAt});
 
   factory ExamRecord.fromJson(Map<String, dynamic> json) {
-    return ExamRecord(id: json['id'], name: json['name'], state: json['state'], createdAt: DateTime.parse(json['created_at']));
+    return ExamRecord(
+      id: json['id'],
+      name: json['name'] ?? "Exam",
+      state: json['state'] ?? "Pre-Setup",
+      createdAt: DateTime.parse(json['created_at']),
+    );
   }
 }
 
