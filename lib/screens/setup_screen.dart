@@ -1,10 +1,13 @@
 import 'package:ai_exam_engine/models/candidate_model.dart';
+import 'package:ai_exam_engine/models/exam_blueprint_model.dart';
 import 'package:ai_exam_engine/providers/candidate_provider.dart';
+import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
 import 'package:ai_exam_engine/widgets/candidate_selection_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/exam_config.dart';
 import '../providers/supabase_provider.dart';
+import '../widgets/blueprint_selection_modal.dart';
 import '../widgets/concept_map_widget.dart';
 import '../widgets/section_modal.dart';
 import '../widgets/weighting_modal.dart';
@@ -13,9 +16,9 @@ import '../widgets/library_modal.dart';
 enum ProcessingStatus { idle, extracting, translating, analyzing, completed }
 
 class SetupScreen extends StatefulWidget {
-  final Function(String text, ExamConfig config, List<AnalyzedChapter> chapters)? onStart;
+  final Function(String text, ExamConfig config, List<AnalyzedChapter> chapters)? onNext;
 
-  const SetupScreen({super.key, this.onStart});
+  const SetupScreen({super.key, this.onNext});
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -24,8 +27,11 @@ class SetupScreen extends StatefulWidget {
 class _SetupScreenState extends State<SetupScreen> {
   ProcessingStatus _libraryProcessingStatus = ProcessingStatus.idle;
   ProcessingStatus _candidateProcessingStatus = ProcessingStatus.idle;
+  ProcessingStatus _blueprintProcessingStatus = ProcessingStatus.idle;
   List<AnalyzedChapter> _analyzedChapters = [];
   List<Candidate> _fetchedCandidates = [];
+  late ExamBlueprint section;
+
   String sourceText = '';
 
   String _examName = 'Exam';
@@ -826,20 +832,21 @@ class _SetupScreenState extends State<SetupScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'No Assessment Sections',
+          /*const Text(
+            'No BBlueprint',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
+          const SizedBox(height: 16),*/
+          ElevatedButton.icon(
             onPressed: _openAddSectionModal,
+            icon: const Icon(Icons.photo_library, size: 16),
+            label: const Text('Select from Blueprints List'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0F172A),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Create First Section', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -849,11 +856,11 @@ class _SetupScreenState extends State<SetupScreen> {
   Widget _buildSectionsList() {
     return ListView.builder(
       padding: const EdgeInsets.all(24),
-      itemCount: sections.length + 1,
+      itemCount: sections.length,
       itemBuilder: (context, index) {
-        if (index == sections.length) {
+        /*if (index == sections.length) {
           return _buildAddSectionButton();
-        }
+        }*/
         return _buildSectionCard(sections[index], index);
       },
     );
@@ -907,7 +914,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   ],
                 ),
               ),
-              Row(
+              /*Row(
                 children: [
                   IconButton(icon: const Icon(Icons.edit, size: 14), color: const Color(0xFF94A3B8), onPressed: () => _openEditSectionModal(section)),
                   IconButton(
@@ -916,7 +923,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     onPressed: () => _deleteSection(index),
                   ),
                 ],
-              ),
+              ),*/
             ],
           ),
           const SizedBox(height: 16),
@@ -982,6 +989,30 @@ class _SetupScreenState extends State<SetupScreen> {
               ],
             ),
           ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: qt.bloomsDistribution.map((bloom) {
+              if (bloom.count != 0) {
+                return Card.outlined(
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("${bloom.level}:", style: TextStyle(color: Colors.grey)),
+                        Text("${bloom.count}", style: TextStyle(color: Colors.black)),
+                      ],
+                    ),
+                  ),
+                );
+              } else {
+                return SizedBox.shrink();
+              }
+            }).toList(),
+          ),
         ],
       ),
     );
@@ -1047,7 +1078,7 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
-  Widget _buildBlueprintFooter() {
+  /*  Widget _buildBlueprintFooter() {
     final canStart = _libraryProcessingStatus == ProcessingStatus.completed && sections.isNotEmpty;
 
     return Container(
@@ -1079,7 +1110,7 @@ class _SetupScreenState extends State<SetupScreen> {
         ),
       ),
     );
-  }
+  }*/
 
   // Helper methods
   int _calculateTotalQuestions() {
@@ -1259,17 +1290,31 @@ class _SetupScreenState extends State<SetupScreen> {
   void _openAddSectionModal() {
     showDialog(
       context: context,
-      builder: (context) => SectionModal(
-        onSave: (section) {
-          setState(() {
-            sections.add(section);
-          });
-        },
-      ),
+      builder: (context) => BlueprintSelectionModal(onSelect: _handleSelectFromBlueprint),
     );
   }
 
-  void _openEditSectionModal(ExamSection section) {
+  Future<void> _handleSelectFromBlueprint(String blueprintId) async {
+    Navigator.of(context).pop();
+    final supabase = context.read<SupabaseProvider>();
+    final candid = context.read<ExamBlueprintProvider>();
+    final user = supabase.client.auth.currentSession?.user.id;
+    if (user == null) return;
+    // final fullPath = 'library/$user/$fileName';
+    final examSection = await candid.getBlueprintById(blueprintId);
+    // final metadata = await supabase.client.from("chapters").select("title, concepts").eq("user_id", user).eq("file_name", groupName);
+    if (examSection == null) return;
+    setState(() {
+      // _sourceText = metadata['extracted_text'];
+      sections = examSection.sections;
+      // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
+      _blueprintProcessingStatus = ProcessingStatus.completed;
+    });
+
+    return;
+  }
+
+  /*void _openEditSectionModal(ExamSection section) {
     showDialog(
       context: context,
       builder: (context) => SectionModal(
@@ -1290,7 +1335,7 @@ class _SetupScreenState extends State<SetupScreen> {
     setState(() {
       sections.removeAt(index);
     });
-  }
+  }*/
 
   Future<void> _handleImportBlueprint() async {
     // TODO: Implement XML import
@@ -1302,7 +1347,7 @@ class _SetupScreenState extends State<SetupScreen> {
     _showInfo('Export feature coming soon');
   }
 
-  void _handleStartClick() {
+  /* void _handleStartClick() {
     if (sourceText.isNotEmpty && sections.isNotEmpty) {
       final config = ExamConfig(
         examName: _examName,
@@ -1315,7 +1360,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
       widget.onStart?.call(sourceText, config, _analyzedChapters);
     }
-  }
+  }*/
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
