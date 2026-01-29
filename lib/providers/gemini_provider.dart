@@ -9,7 +9,7 @@ import '../models/exam_config.dart';
 class GeminiProvider with ChangeNotifier {
   // final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-3-flash-preview');
 
-  Future<Map<String, dynamic>?> genAIOnPDF({required String fileName, required Function(String) onStatusUpdate}) async {
+  Future<Map<String, dynamic>?> genAIOnPDF({required String fileName, required String fileId, required Function(String) onStatusUpdate}) async {
     final supabase = Supabase.instance.client;
     final userId = supabase.auth.currentUser?.id;
 
@@ -40,7 +40,13 @@ class GeminiProvider with ChangeNotifier {
       }
       final rows = chapters
           .map(
-            (c) => {'file_name': fileName, 'title': c.title, 'concepts': c.concepts.map((concept) => concept.toJson()).toList(), 'user_id': userId},
+            (c) => {
+              'file_name': fileName,
+              'file_id': fileId,
+              'title': c.title,
+              'concepts': c.concepts.map((concept) => concept.toJson()).toList(),
+              'user_id': userId,
+            },
           )
           .toList();
       if (kDebugMode) {

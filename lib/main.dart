@@ -1,7 +1,7 @@
-
 import 'package:ai_exam_engine/providers/candidate_provider.dart';
 import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
 import 'package:ai_exam_engine/providers/gemini_provider.dart';
+import 'package:ai_exam_engine/providers/question_provider.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -97,6 +97,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ExamBlueprintProvider()),
         ChangeNotifierProvider(create: (_) => CandidateProvider()),
         ChangeNotifierProvider(create: (_) => GeminiProvider()),
+        ChangeNotifierProvider(create: (_) => QuestionProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

@@ -25,9 +25,10 @@ class _BlueprintSelectionModalState extends State<BlueprintSelectionModal> {
   Future<void> _loadFiles() async {
     setState(() => _loading = true);
     try {
-      final dbService = context.read<ExamBlueprintProvider>();
-      await dbService.fetchBlueprints();
       if (mounted) {
+        final dbService = context.read<ExamBlueprintProvider>();
+        await dbService.fetchBlueprints();
+
         setState(() {
           _files = dbService.blueprints;
           _loading = false;
@@ -248,7 +249,7 @@ class _BlueprintSelectionModalState extends State<BlueprintSelectionModal> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 6),
+                      /*const SizedBox(height: 6),
 
                       // Metadata row
                       Row(
@@ -260,7 +261,7 @@ class _BlueprintSelectionModalState extends State<BlueprintSelectionModal> {
                             style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
                           ),
                         ],
-                      ),
+                      ),*/
                     ],
                   ),
                 ),

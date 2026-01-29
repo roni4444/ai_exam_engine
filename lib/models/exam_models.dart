@@ -75,6 +75,7 @@ class AnalyzedChapter {
 
 class Question {
   final String id;
+  final String examId;
   final String sectionId;
   final String sectionName;
   final String text;
@@ -93,7 +94,8 @@ class Question {
   final String? bloomsLevel;
   final bool isScenario;
   final String? scenarioText;
-  final List<Question>? subQuestions;
+  final List<SubQuestion>? subQuestions;
+  final String latexVersion;
 
   Question({
     required this.id,
@@ -116,11 +118,14 @@ class Question {
     this.isScenario = false,
     this.scenarioText,
     this.subQuestions,
+    required this.examId,
+    required this.latexVersion,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
     return Question(
       id: json['id'],
+      examId: json['exam_id'],
       sectionId: json['sectionId'] ?? '',
       sectionName: json['sectionName'] ?? '',
       text: json['text'],
@@ -139,13 +144,15 @@ class Question {
       bloomsLevel: json['bloomsLevel'],
       isScenario: json['isScenario'] ?? false,
       scenarioText: json['scenarioText'],
-      subQuestions: json['subQuestions'] != null ? (json['subQuestions'] as List).map((q) => Question.fromJson(q)).toList() : null,
+      subQuestions: json['subQuestions'] != null ? (json['subQuestions'] as List).map((q) => SubQuestion.fromJson(q)).toList() : null,
+      latexVersion: json['latexVersion'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'exam_id': examId,
       'sectionId': sectionId,
       'sectionName': sectionName,
       'text': text,
@@ -165,7 +172,108 @@ class Question {
       'isScenario': isScenario,
       'scenarioText': scenarioText,
       'subQuestions': subQuestions?.map((q) => q.toJson()).toList(),
+      'latexVersion': latexVersion,
     };
+  }
+}
+
+class SubQuestion {
+  final String text;
+  final String concept;
+  final String difficulty;
+  final String type;
+  final int marks;
+  final String modelAnswer;
+  final List<String> rubric;
+  final List<String>? options;
+  final List<MatchingPair>? matchingPairs;
+  final double negativeValue;
+  final bool allowPartial;
+  final bool isOrType;
+  final String? orGroupId;
+  final String? bloomsLevel;
+  final String latexVersion;
+
+  SubQuestion({
+    required this.text,
+    required this.concept,
+    required this.difficulty,
+    required this.type,
+    required this.marks,
+    required this.modelAnswer,
+    required this.rubric,
+    this.options,
+    this.matchingPairs,
+    required this.negativeValue,
+    required this.allowPartial,
+    required this.isOrType,
+    this.orGroupId,
+    this.bloomsLevel,
+    required this.latexVersion,
+  });
+
+  factory SubQuestion.fromJson(Map<String, dynamic> json) {
+    return SubQuestion(
+      text: json['text'],
+      concept: json['concept'],
+      difficulty: json['difficulty'],
+      type: json['type'],
+      marks: json['marks'],
+      modelAnswer: json['modelAnswer'],
+      rubric: List<String>.from(json['rubric']),
+      options: json['options'] != null ? List<String>.from(json['options']) : null,
+      matchingPairs: json['matchingPairs'] != null ? (json['matchingPairs'] as List).map((m) => MatchingPair.fromJson(m)).toList() : null,
+      negativeValue: (json['negativeValue'] ?? 0).toDouble(),
+      allowPartial: json['allowPartial'] ?? false,
+      isOrType: json['isOrType'] ?? false,
+      orGroupId: json['orGroupId'],
+      bloomsLevel: json['bloomsLevel'],
+      latexVersion: json['latexVersion'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'text': text,
+    'concept': concept,
+    'difficulty': difficulty,
+    'type': type,
+    'marks': marks,
+    'modelAnswer': modelAnswer,
+    'rubric': rubric,
+    'options': options,
+    'matchingPairs': matchingPairs?.map((m) => m.toJson()).toList(),
+    'negativeValue': negativeValue,
+    'allowPartial': allowPartial,
+    'isOrType': isOrType,
+    'orGroupId': orGroupId,
+    'bloomsLevel': bloomsLevel,
+    'latexVersion': latexVersion,
+  };
+}
+
+class QuestionGenerationProgress {
+  final int current;
+  final int total;
+  final String status;
+  final String? error;
+  final bool isComplete;
+
+  QuestionGenerationProgress({required this.current, required this.total, required this.status, this.error, this.isComplete = false});
+
+  double get progress => total > 0 ? current / total : 0;
+
+  factory QuestionGenerationProgress.fromJson(Map<String, dynamic> json) {
+    return QuestionGenerationProgress(
+      current: json['current'] ?? 0,
+      total: json['total'] ?? 0,
+      status: json['status'] ?? 'idle',
+      error: json['error'],
+      isComplete: json['is_complete'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'current': current, 'total': total, 'status': status, 'error': error, 'is_complete': isComplete};
   }
 }
 

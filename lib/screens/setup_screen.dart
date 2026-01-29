@@ -3,6 +3,7 @@ import 'package:ai_exam_engine/models/exam_blueprint_model.dart';
 import 'package:ai_exam_engine/providers/candidate_provider.dart';
 import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
 import 'package:ai_exam_engine/widgets/candidate_selection_modal.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/exam_config.dart';
@@ -16,7 +17,7 @@ import '../widgets/library_modal.dart';
 enum ProcessingStatus { idle, extracting, translating, analyzing, completed }
 
 class SetupScreen extends StatefulWidget {
-  final Function({required List<Candidate> candidates, required ExamConfig config, required List<AnalyzedChapter> chapters})? onNext;
+  final Function({required String examId, required ExamConfig config, required List<AnalyzedChapter> chapters})? onNext;
 
   const SetupScreen({super.key, this.onNext});
 
@@ -34,7 +35,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   // String sourceText = '';
 
-  String _examName = 'Exam';
+  String _examName = '';
   late String _examId;
   // int _studentCount = 3;
   // List<String> _studentNames = ['Student 1', 'Student 2', 'Student 3'];
@@ -541,13 +542,11 @@ class _SetupScreenState extends State<SetupScreen> {
         const SizedBox(height: 16),
         TextField(
           controller: TextEditingController(text: _examName),
-          onSubmitted: (value) async {
-            final supabase = context.read<SupabaseProvider>();
-            final user = supabase.client.auth.currentSession?.user.id;
-            if (user != null) await supabase.client.from("exams").update({"name": value}).eq("user_id", user).eq("id", _examId);
-            setState(() {
-              _examName = value;
-            });
+          onSubmitted: (value) {
+            setState(() {});
+          },
+          onChanged: (value) {
+            _examName = value;
           },
           decoration: InputDecoration(
             filled: true,
@@ -858,7 +857,7 @@ class _SetupScreenState extends State<SetupScreen> {
           ),
           const SizedBox(height: 16),*/
           ElevatedButton.icon(
-            onPressed: _openAddSectionModal,
+            onPressed: (_examName.isEmpty) ? null : _openAddSectionModal,
             icon: const Icon(Icons.photo_library, size: 16),
             label: const Text('Select from Blueprints List'),
             style: ElevatedButton.styleFrom(
@@ -1081,7 +1080,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Widget _buildAddSectionButton() {
     return InkWell(
-      onTap: _openAddSectionModal,
+      onTap: (_examName.isEmpty) ? null : _openAddSectionModal,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -1261,7 +1260,10 @@ class _SetupScreenState extends State<SetupScreen> {
     final user = supabase.client.auth.currentSession?.user.id;
     if (user == null) return;
     // final fullPath = 'library/$user/$fileName';
-    final metadata = await supabase.client.from("chapters").select("title, concepts").eq("user_id", user).eq("file_name", fileName);
+    final metadata = await supabase.client.from("chapters").select("title, concepts, file_id").eq("user_id", user).eq("file_name", fileName);
+    if (kDebugMode) {
+      print(metadata);
+    }
     if (metadata.isEmpty) return;
     setState(() {
       // _sourceText = metadata['extracted_text'];
@@ -1269,7 +1271,19 @@ class _SetupScreenState extends State<SetupScreen> {
       // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
       _libraryProcessingStatus = ProcessingStatus.completed;
     });
-    await supabase.client.from("exams").update({"library_id": fileId}).eq("user_id", user).eq("id", _examId);
+    await supabase.client.from("exams").update({"library_id": metadata.first["file_id"], "state": "setup"}).eq("user_id", user).eq("id", _examId);
+    if (widget.onNext != null &&
+        _examId.isNotEmpty &&
+        _examName.isNotEmpty &&
+        _fetchedCandidates.isNotEmpty &&
+        sections.isNotEmpty &&
+        _analyzedChapters.isNotEmpty) {
+      widget.onNext?.call(
+        examId: _examId,
+        config: ExamConfig(examName: _examName, studentCount: _fetchedCandidates.length, studentNames: _fetchedCandidates, sections: sections),
+        chapters: _analyzedChapters,
+      );
+    }
     return;
   }
 
@@ -1288,7 +1302,19 @@ class _SetupScreenState extends State<SetupScreen> {
       // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
       _candidateProcessingStatus = ProcessingStatus.completed;
     });
-    await supabase.client.from("exams").update({"candidate_group_id": candidateGroupId}).eq("user_id", user).eq("id", _examId);
+    await supabase.client.from("exams").update({"candidate_group_id": candidateGroupId, "state": "setup"}).eq("user_id", user).eq("id", _examId);
+    if (widget.onNext != null &&
+        _examId.isNotEmpty &&
+        _examName.isNotEmpty &&
+        _fetchedCandidates.isNotEmpty &&
+        sections.isNotEmpty &&
+        _analyzedChapters.isNotEmpty) {
+      widget.onNext?.call(
+        examId: _examId,
+        config: ExamConfig(examName: _examName, studentCount: _fetchedCandidates.length, studentNames: _fetchedCandidates, sections: sections),
+        chapters: _analyzedChapters,
+      );
+    }
     return;
   }
 
@@ -1318,6 +1344,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Future<void> _handleSelectFromBlueprint(String blueprintId) async {
     Navigator.of(context).pop();
+    if (!mounted) return;
     final supabase = context.read<SupabaseProvider>();
     final candid = context.read<ExamBlueprintProvider>();
     final user = supabase.client.auth.currentSession?.user.id;
@@ -1326,13 +1353,30 @@ class _SetupScreenState extends State<SetupScreen> {
     final examSection = await candid.getBlueprintById(blueprintId);
     // final metadata = await supabase.client.from("chapters").select("title, concepts").eq("user_id", user).eq("file_name", groupName);
     if (examSection == null) return;
+    if (!mounted) return;
     setState(() {
       // _sourceText = metadata['extracted_text'];
       sections = examSection.sections;
       // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
       _blueprintProcessingStatus = ProcessingStatus.completed;
     });
-    await supabase.client.from("exams").update({"exam_blueprint_id": blueprintId, "name": _examName}).eq("user_id", user).eq("id", _examId);
+    await supabase.client
+        .from("exams")
+        .update({"exam_blueprint_id": blueprintId, "state": "setupComplete", "name": _examName})
+        .eq("user_id", user)
+        .eq("id", _examId);
+    if (widget.onNext != null &&
+        _examId.isNotEmpty &&
+        _examName.isNotEmpty &&
+        _fetchedCandidates.isNotEmpty &&
+        sections.isNotEmpty &&
+        _analyzedChapters.isNotEmpty) {
+      widget.onNext?.call(
+        examId: _examId,
+        config: ExamConfig(examName: _examName, studentCount: _fetchedCandidates.length, studentNames: _fetchedCandidates, sections: sections),
+        chapters: _analyzedChapters,
+      );
+    }
     return;
   }
 

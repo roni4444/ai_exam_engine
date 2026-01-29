@@ -101,6 +101,7 @@ class _LibraryFileCardState extends State<LibraryFileCard> {
                                     }
                                   });
                                 },
+                                fileId: widget.file.id,
                               ),
                         child: Text(widget.file.isGeminiProcessed ? "Your File is processed" : "Analyze with Gemini"),
                       )

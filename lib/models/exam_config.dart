@@ -1,7 +1,9 @@
+import 'package:ai_exam_engine/models/candidate_model.dart';
+
 class ExamConfig {
   final String examName;
   final int studentCount;
-  final List<String> studentNames;
+  final List<Candidate> studentNames;
   final List<ExamSection> sections;
   final List<String> importantChapters;
   final int importancePercentage;
@@ -27,7 +29,7 @@ class ExamConfig {
   factory ExamConfig.fromJson(Map<String, dynamic> json) => ExamConfig(
     examName: json['examName'] ?? 'Exam',
     studentCount: json['studentCount'] ?? 1,
-    studentNames: List<String>.from(json['studentNames'] ?? []),
+    studentNames: List<Candidate>.from(json['studentNames'] ?? []),
     sections: (json['sections'] as List?)?.map((s) => ExamSection.fromJson(s)).toList() ?? [],
     importantChapters: List<String>.from(json['importantChapters'] ?? []),
     importancePercentage: json['importancePercentage'] ?? 70,

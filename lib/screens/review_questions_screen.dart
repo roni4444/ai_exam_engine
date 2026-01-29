@@ -33,6 +33,8 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
       allowPartial: false,
       isOrType: false,
       bloomsLevel: 'Remember',
+      examId: '',
+      latexVersion: '',
     ),
     Question(
       id: 'q2',
@@ -49,6 +51,8 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
       allowPartial: true,
       isOrType: false,
       bloomsLevel: 'Understand',
+      examId: '',
+      latexVersion: '',
     ),
     Question(
       id: 'q3',
@@ -65,6 +69,8 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
       allowPartial: true,
       isOrType: false,
       bloomsLevel: 'Apply',
+      examId: '',
+      latexVersion: '',
     ),
   ];
 

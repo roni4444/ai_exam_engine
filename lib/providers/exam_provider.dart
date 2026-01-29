@@ -1,3 +1,4 @@
+import 'package:ai_exam_engine/models/candidate_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/exam_models.dart';
@@ -11,7 +12,7 @@ class ExamProvider with ChangeNotifier {
   List<ExamRecord> _recentExams = [];
   List<AnalyzedChapter> _chapters = [];
   List<Question> _questions = [];
-  List<Student> _students = [];
+  List<Candidate> _students = [];
   String? _currentExamId;
   String _examName = 'New Exam';
   bool _isLoading = false;
@@ -23,7 +24,7 @@ class ExamProvider with ChangeNotifier {
   List<ExamRecord> get recentExams => _recentExams;
   List<AnalyzedChapter> get chapters => _chapters;
   List<Question> get questions => _questions;
-  List<Student> get students => _students;
+  List<Candidate> get students => _students;
   String? get currentExamId => _currentExamId;
   String get examName => _examName;
   bool get isLoading => _isLoading;
@@ -60,10 +61,7 @@ class ExamProvider with ChangeNotifier {
       if (userId == null) return;
 
       final response = await _supabase.from('exams').select().eq('user_id', userId).order('created_at', ascending: false).limit(5);
-      if (kDebugMode) {
-        print(response);
-      }
-      _recentExams = (response.where((test) => test['state'] != null) as List).map((e) => ExamRecord.fromJson(e)).toList();
+      _recentExams = response.where((test) => test['state'] != null).toList().map((e) => ExamRecord.fromJson(e)).toList();
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -119,12 +117,12 @@ class ExamProvider with ChangeNotifier {
     }
   }
 
-  Future<void> saveStudents(String examId, List<Student> students) async {
+  Future<void> saveStudents(String examId, List<Candidate> students) async {
     try {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) return;
 
-      final rows = students.map((s) => {'id': s.id, 'exam_id': examId, 'name': s.name, 'ability_level': s.abilityLevel, 'user_id': userId}).toList();
+      final rows = students.map((s) => {'id': s.id, 'name': s.name, 'user_id': userId}).toList();
 
       await _supabase.from('students').upsert(rows);
       _students = students;
@@ -140,24 +138,31 @@ class ExamProvider with ChangeNotifier {
       notifyListeners();
 
       final exam = await _supabase.from('exams').select().eq('id', examId).single();
+      if (kDebugMode) {
+        print("exam ${exam["state"]}");
+      }
 
-      final chapters = await _supabase.from('chapters').select().eq('exam_id', examId);
+      final chapters = await _supabase.from('chapters').select().eq('file_id', exam['library_id']);
 
-      final questions = await _supabase.from('questions').select().eq('exam_id', examId);
+      // final questions = await _supabase.from('questions').select().eq('exam_id', examId);
 
-      final students = await _supabase.from('students').select().eq('exam_id', examId);
+      final candidate = await _supabase.from('candidate_group_members').select().eq('group_id', exam['candidate_group_id']);
 
       _currentExamId = examId;
       _examName = exam['name'];
-      _chapters = (chapters as List).map((c) => AnalyzedChapter.fromJson({'title': c['title'], 'concepts': c['concepts']})).toList();
+      // _chapters = (chapters as List).map((c) => AnalyzedChapter.fromJson({'title': c['title'], 'concepts': c['concepts']})).toList();
 
-      _questions = (questions as List).map((q) => Question.fromJson(q['data'])).toList();
+      // _questions = (questions as List).map((q) => Question.fromJson(q['data'])).toList();
 
-      _students = (students as List).map((s) => Student.fromJson({'id': s['id'], 'name': s['name'], 'abilityLevel': s['ability_level']})).toList();
+      // _students = (candidate as List).map((s) => Candidate.fromJson({'id': s['id']})).toList();
 
-      return {'config': exam['config'], 'state': exam['state'], 'allocations': exam['allocations'] ?? {}};
+      return {'state': exam["state"]};
+      // return {'config': exam['config'], 'state': exam['state'], 'allocations': exam['allocations'] ?? {}};
     } catch (e) {
       _errorMessage = e.toString();
+      if (kDebugMode) {
+        print(_errorMessage);
+      }
       return null;
     } finally {
       _isLoading = false;

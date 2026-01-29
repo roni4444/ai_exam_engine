@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:ai_exam_engine/providers/candidate_provider.dart';
 import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
+import 'package:ai_exam_engine/screens/question_generation_screen.dart';
 import 'package:ai_exam_engine/screens/review_questions_screen.dart';
 import 'package:ai_exam_engine/screens/settings_screen.dart';
 import 'package:file_picker/file_picker.dart';
@@ -14,6 +15,7 @@ import '../models/exam_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/exam_provider.dart';
 import '../providers/library_provider.dart';
+import '../providers/question_provider.dart';
 import '../providers/supabase_provider.dart';
 import '../widgets/action_card_widget.dart';
 import '../widgets/add_candidate_group_modal.dart';
@@ -50,6 +52,8 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   final List<IconData> processesIcons = [Icons.settings, Icons.auto_fix_high, Icons.send, Icons.grading, Icons.summarize];
   ProcessingStatus processingStatus = ProcessingStatus.idle;
   String? selectedGroupId;
+  String _examId = "";
+  ExamConfig? _config;
   // List<Candidate> filteredCandidates = [];
   // List<Candidate> unfilteredCandidates = [];
 
@@ -104,11 +108,11 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   void initState() {
     super.initState();
     _pageViewController = PageController(initialPage: 0);
-    /* tabController = TabController(initialIndex: 0, length: 2, vsync: this);
+    // tabController = TabController(initialIndex: 0, length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ExamProvider>().loadRecentExams();
-      context.read<LibraryProvider>().loadLibraryFiles();
-    });*/
+      // context.read<LibraryProvider>().loadLibraryFiles();
+    });
   }
 
   @override
@@ -373,6 +377,9 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                   child: PageView(
                     controller: _pageViewController,
                     onPageChanged: (page) {
+                      if (page == 3) {
+                        context.read<QuestionProvider>().loadQuestions(null);
+                      }
                       setState(() {
                         processIndex = page - 1;
                       });
@@ -503,9 +510,15 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                                     onTap: () async {
                                                       final data = await examProvider.loadExamData(exam.id);
                                                       if (!context.mounted) return;
-
-                                                      if (data != null && data['state'] == 'results') {
-                                                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ResultsScreen()));
+                                                      if (kDebugMode) {
+                                                        print("data ${data!['state']}");
+                                                      }
+                                                      _examId = exam.id;
+                                                      if (data != null && data['state'] == 'setup') {
+                                                        _pageViewController.jumpToPage(1);
+                                                      }
+                                                      if (data != null && data['state'] == 'setupComplete') {
+                                                        _pageViewController.jumpToPage(2);
                                                       }
                                                     },
                                                   );
@@ -962,6 +975,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                         ),
                       ),
                       SetupScreen(onNext: onSetupScreenNext),
+                      QuestionGenerationScreen(examId: _examId, config: _config),
                       ReviewQuestionsScreen(),
                     ],
                   ),
@@ -1548,21 +1562,26 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> onSetupScreenNext({required List<Candidate> candidates, required ExamConfig config, required List<AnalyzedChapter> chapters}) async {
-    Navigator.of(context).pop();
+  Future<void> onSetupScreenNext({required String examId, required ExamConfig config, required List<AnalyzedChapter> chapters}) async {
+    // Navigator.of(context).pop();
     final supabase = context.read<SupabaseProvider>();
     final user = supabase.client.auth.currentSession?.user.id;
     if (user == null) return;
+    _examId = examId;
+    _config = config;
+    // print("here");
+    // await _pageViewController.animateToPage(2, duration: Duration(seconds: 3), curve: Curves.easeInOut);
     // final fullPath = 'library/$user/$fileName';
     // final metadata = await supabase.client.from("chapters").select("title, concepts").eq("user_id", user).eq("file_name", fileName);
     // if (metadata.isEmpty) return;
-    setState(() {
+    /*setState(() {
+
       // _sourceText = metadata['extracted_text'];
       // _analyzedChapters = (metadata as List).map((c) => AnalyzedChapter.fromJson(c)).toList();
       // _examName = metadata['title_suggestion'] ?? 'Exam from Library';
       // _libraryProcessingStatus = ProcessingStatus.completed;
-    });
-    return;
+    });*/
+    // return;
   }
 }
 
