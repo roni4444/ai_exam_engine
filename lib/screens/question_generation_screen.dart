@@ -264,7 +264,7 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
+            crossAxisCount: 6,
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
             childAspectRatio: 1.5,
@@ -298,7 +298,7 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
                 ),
               ),
             ),
-
+          /*
           const SizedBox(height: 32),
 
           // Action Buttons
@@ -321,7 +321,7 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
                 ),
               ),
             ],
-          ),
+          ),*/
         ],
       ),
     );

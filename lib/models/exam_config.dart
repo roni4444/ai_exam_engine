@@ -194,6 +194,8 @@ class SubQuestionConfig {
   );
 }
 
+/*
+
 class AnalyzedChapter {
   final String title;
   final List<ChapterConcept> concepts;
@@ -218,3 +220,4 @@ class ChapterConcept {
   factory ChapterConcept.fromJson(Map<String, dynamic> json) =>
       ChapterConcept(name: json['name'] ?? '', description: json['description'] ?? '', type: json['type'] ?? 'general');
 }
+*/

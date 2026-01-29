@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/exam_config.dart';
+import '../models/exam_models.dart';
 
 class WeightingModal extends StatefulWidget {
   final List<AnalyzedChapter> chapters;
@@ -7,7 +8,13 @@ class WeightingModal extends StatefulWidget {
   final int importancePercentage;
   final Function(List<String>, int) onSave;
 
-  const WeightingModal({super.key, required this.chapters, required this.importantChapters, required this.importancePercentage, required this.onSave});
+  const WeightingModal({
+    super.key,
+    required this.chapters,
+    required this.importantChapters,
+    required this.importancePercentage,
+    required this.onSave,
+  });
 
   @override
   State<WeightingModal> createState() => _WeightingModalState();

@@ -66,7 +66,7 @@ class QuestionProvider extends ChangeNotifier {
     try {
       // Update progress in database
       await _updateProgressInDb(_progress!);
-
+      // print("object");
       // Build syllabus context
       final syllabusContext = _buildSyllabusContext();
       final allQuestions = <Question>[];
@@ -114,9 +114,9 @@ class QuestionProvider extends ChangeNotifier {
               chapters: _currentChapters,
               bytes: bytes,
             );
-
             allQuestions.addAll(scenarioQuestions);
             currentProgress += scenarioQuestions.length;
+            await _saveQuestionsToDb(scenarioQuestions);
           } else {
             // Batch process all standard questions of this type
             final standardQuestions = await _generateStandardQuestionsBatch(
@@ -127,9 +127,9 @@ class QuestionProvider extends ChangeNotifier {
               syllabusContext: syllabusContext,
               bytes: bytes,
             );
-
             allQuestions.addAll(standardQuestions);
             currentProgress += standardQuestions.length;
+            await _saveQuestionsToDb(standardQuestions);
           }
 
           // Update progress after each question type batch
@@ -211,7 +211,7 @@ class QuestionProvider extends ChangeNotifier {
       }*/
 
       // Save all questions to database
-      await _saveQuestionsToDb(allQuestions);
+      // await _saveQuestionsToDb(allQuestions);
       _questions = allQuestions;
 
       // Mark as complete
@@ -230,8 +230,7 @@ class QuestionProvider extends ChangeNotifier {
     }
   }
 
-  /// Generate scenario-based question using Gemini
-  Future<Question?> _generateScenarioQuestion({
+  /* Future<Question?> _generateScenarioQuestion({
     required String examId,
     required int batch,
     required ExamSection section,
@@ -259,7 +258,7 @@ class QuestionProvider extends ChangeNotifier {
         - Each concept may include name, description, and type.
         - If type is unknown, use "general".
         - Keep descriptions short (1 sentence).
-        
+
       Follow the provided JSON schema exactly.'''),
     );
     // Create InlineDataPart
@@ -319,10 +318,9 @@ class QuestionProvider extends ChangeNotifier {
     );
 
     return question;
-  }
+  }*/
 
-  /// Generate standard questions using Gemini
-  Future<List<Question>> _generateStandardQuestions({
+  /*  Future<List<Question>> _generateStandardQuestions({
     required String examId,
     required int batch,
     required ExamSection section,
@@ -357,7 +355,7 @@ class QuestionProvider extends ChangeNotifier {
         - Each Model Answer should be the proper answer of the question justifying the rubric (if present).
         - If type is unknown, use "general".
         - Keep descriptions short (1 sentence).
-        
+
       Follow the provided JSON schema exactly.'''),
     );
     // Create InlineDataPart
@@ -421,7 +419,7 @@ class QuestionProvider extends ChangeNotifier {
     }
 
     return questions;
-  }
+  }*/
 
   /*/// Call Gemini API
   Future<String> _callGemini(String prompt) async {
@@ -450,7 +448,8 @@ class QuestionProvider extends ChangeNotifier {
     return data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
   }*/
 
-  /// Build scenario prompt
+  /*
+
   String _buildScenarioPrompt(ScenarioConfig scenarioConfig, List<AnalyzedChapter> chapters) {
     final subQuestions = scenarioConfig.subQuestions as List<SubQuestionConfig>? ?? [];
 
@@ -470,10 +469,10 @@ Return STRICT JSON Object:
 {
     "scenarioText": "The detailed paragraph...",
     "subQuestions": [
-        { 
-            "text": "Question text...", 
-            "type": "Type from requirement", 
-            "modelAnswer": "...", 
+        {
+            "text": "Question text...",
+            "type": "Type from requirement",
+            "modelAnswer": "...",
             "rubric": ["point 1", "point 2"],
             "options": ["A", "B", "C", "D"] (if MCQ)
         }
@@ -482,7 +481,7 @@ Return STRICT JSON Object:
 ''';
   }
 
-  /// Build standard question prompt
+
   String _buildStandardQuestionPrompt(QuestionTypeConfig qt, ExamSection section, String syllabusContext) {
     final DifficultyCount count = qt.count;
     String bloomsInstruction = '';
@@ -511,6 +510,7 @@ FORMATTING RULES:
 Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rubric, options (MCQ), bloomsLevel.
 ''';
   }
+*/
 
   /// Build syllabus context from chapters
   String _buildSyllabusContext() {
@@ -519,8 +519,8 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     return _currentChapters
         .map((c) {
           final isPriority = importantChapters.contains(c.title);
-          final concepts = c.concepts as List? ?? [];
-          final conceptsList = concepts.take(40).map((x) => x['name']).join(', ');
+          final List<ChapterConcept> concepts = c.concepts;
+          final conceptsList = concepts.take(40).map((x) => x.name).join(', ');
 
           return 'Chapter: "${c.title}" ${isPriority ? '[HIGH PRIORITY]' : '[Standard]'}\nConcepts: $conceptsList';
         })
@@ -560,16 +560,16 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
   /// Calculate total questions to generate
   int _calculateTotalQuestions() {
     int total = 0;
-    final sections = _examBlueprint?.sections as List? ?? [];
+    final List<ExamSection> sections = _examBlueprint!.sections;
 
-    for (var section in sections) {
-      final questionTypes = section['questionTypes'] as List? ?? [];
-      for (var qt in questionTypes) {
-        final count = qt['count'] as Map? ?? {};
-        total += (count['Easy'] ?? 0) as int;
-        total += (count['Medium'] ?? 0) as int;
-        total += (count['Hard'] ?? 0) as int;
-        total += ((qt['scenarios'] as List?)?.length ?? 0);
+    for (ExamSection section in sections) {
+      final List<QuestionTypeConfig> questionTypes = section.questionTypes;
+      for (QuestionTypeConfig qt in questionTypes) {
+        final DifficultyCount count = qt.count;
+        total += (count.easy);
+        total += (count.medium);
+        total += (count.hard);
+        total += ((qt.scenarios as List?)?.length ?? 0);
       }
     }
 
@@ -596,8 +596,10 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
   /// Save questions to database
   Future<void> _saveQuestionsToDb(List<Question> questions) async {
     try {
-      final batch = questions.map((q) => q.toJson()).toList();
-
+      final batch = questions.map((q) => q.toDBJson(_currentExamId)).toList();
+      if (kDebugMode) {
+        print('Saving in $_currentExamId the $batch questions');
+      }
       // Insert in chunks of 100 to avoid payload size limits
       for (int i = 0; i < batch.length; i += 10) {
         final chunk = batch.skip(i).take(10).toList();
@@ -633,16 +635,53 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         _currentChapters = (response2 as List).map((json) => AnalyzedChapter.fromJson(json)).toList();
         _importantChapters = (response2 as List).map((json) => json['importantChapters'].toString()).toList();
         _fileName = (response2 as List).map((json) => json['file_name'].toString()).toList().first;
-        final response3 = await _supabase.from('candidate_group_members').select().eq('group_id', _candidateGroupId);
-        _currentCandidates = (response3 as List).map((json) => Candidate.fromJson(json)).toList();
+        _currentCandidates = await getCandidatesForGroup(_candidateGroupId);
         final response4 = await _supabase.from('exam_blueprints').select().eq('id', _examBlueprintId).single();
         _examBlueprint = ExamBlueprint.fromJson(response4);
-
         notifyListeners();
       } catch (e) {
         _error = e.toString();
         notifyListeners();
       }
+    }
+  }
+
+  Future<List<Candidate>> getCandidatesForGroup(String? groupId) async {
+    try {
+      if (groupId == null) return [];
+      // Query the junction table to get candidate IDs for this group
+      // Then join with candidates table to get full candidate details
+      final response = await _supabase
+          .from('candidate_group_members')
+          .select('''
+            candidates (
+              id,
+              name,
+              email,
+              phone,
+              roll_number,
+              created_at,
+              class,
+              section,
+              metadata,
+              user_id,
+              updated_at
+            )
+          ''')
+          .eq('group_id', groupId)
+          .order('assigned_at', ascending: true);
+
+      // Extract candidates from the nested response
+      final List<Candidate> candidates = [];
+
+      for (final item in response as List) {
+        if (item['candidates'] != null) {
+          candidates.add(Candidate.fromJson(item['candidates']));
+        }
+      }
+      return candidates;
+    } catch (error) {
+      throw Exception('Failed to fetch candidates for group: $error');
     }
   }
 
@@ -725,10 +764,6 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         syllabusContext: syllabusContext,
         bytes: bytes,
       );
-
-      if (kDebugMode) {
-        print(batchQuestions.toString());
-      }
 
       generatedQuestions.addAll(batchQuestions);
     }
@@ -865,6 +900,8 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - Output must be a JSON array.
         - Each array item represents exactly ONE question.
         - Each question MUST contain:
+        - "sectionIndex" (string)
+        - "sectionName" (string)
         - "text" (string)
         - "concept" (string)
         - "difficulty" (string)
@@ -880,6 +917,10 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - DOUBLE ESCAPE backslashes (e.g. "\\\\frac").
         - Latex version of the question should be perfectly generated
         - Distribute questions across sections proportionally
+        - All LaTeX content must be Base64-encoded
+        - Do NOT include raw LaTeX anywhere
+        - Do NOT wrap output in markdown
+        - Encode LaTeX using UTF-8 before Base64
 
         Model Answer rules:
         - Each Model Answer should be the proper answer of the question justifying the rubric (if present) separately.
@@ -892,7 +933,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     final responseSchema = Schema.array(
       items: Schema.object(
         properties: {
-          'sectionId': Schema.string(description: 'Section UUID'),
+          'sectionIndex': Schema.integer(description: 'Section No'),
           'sectionName': Schema.string(description: 'Section name'),
           'text': Schema.string(description: 'Question text'),
           'concept': Schema.string(description: 'Related concept name'),
@@ -933,12 +974,12 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
                 'isOrType': Schema.boolean(description: 'Is OR sub-question'),
                 'orGroupId': Schema.string(description: 'UUID for OR group'),
                 'bloomsLevel': Schema.string(description: 'Remember|Understand|Apply|Analyze|Evaluate|Create'),
-                'latexVersion': Schema.string(description: 'LaTeX version of the sub-question'),
+                'latexVersion': Schema.string(description: 'LaTeX version of the sub-question in Base64-encoded LaTeX source (UTF-8)'),
               },
               optionalProperties: ['options', 'matchingPairs', 'orGroupId'],
             ),
           ),
-          'latexVersion': Schema.string(description: 'LaTeX version of the question'),
+          'latexVersion': Schema.string(description: 'LaTeX version of the question in Base64-encoded LaTeX source (UTF-8)'),
         },
         optionalProperties: ['options', 'matchingPairs', 'orGroupId', 'scenarioText', 'subQuestions'],
       ),
@@ -948,6 +989,11 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       Content.multi([prompt, docPart]),
     ], generationConfig: GenerationConfig(responseMimeType: 'application/json', responseSchema: responseSchema));
     // Parse and distribute results back to appropriate sections
+    if (kDebugMode) {
+      debugPrint("response: ${response.text}");
+      debugPrint("tasks: $tasks");
+      debugPrint("batch: $batch");
+    }
     return _parseStandardBatchResponse(response.text ?? "", tasks, batch, examId);
   }
 
@@ -1151,11 +1197,18 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
         return generatedQuestions;
       }
 
+      if (kDebugMode) {
+        debugPrint("raw batch: $rawBatch");
+      }
+
       for (var qData in rawBatch) {
+        if (kDebugMode) {
+          debugPrint("qData: $qData");
+        }
         final sectionIndex = qData['sectionIndex'] as int?;
 
         if (sectionIndex == null || sectionIndex >= tasks.length) {
-          debugPrint('Invalid sectionIndex: $sectionIndex');
+          debugPrint('Invalid sectionIndex in standard batch: $sectionIndex');
           continue;
         }
 
@@ -1181,10 +1234,10 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
           negativeValue: qt.negativeMarks ? qt.negativeValue : 0,
           allowPartial: qt.partialScoring,
           isOrType: qData['isOrType'] as bool? ?? false,
-          orGroupId: qData['orGroupId'] as String?,
+          orGroupId: qData['orGroupId'] as String? ?? '',
           bloomsLevel: qData['bloomsLevel'] as String? ?? qt.bloomsLevel,
           examId: _currentExamId,
-          latexVersion: qData['latex'],
+          latexVersion: qData['latexVersion'] as String? ?? '',
         );
 
         generatedQuestions.add(question);
@@ -1196,8 +1249,29 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
     return generatedQuestions;
   }
 
-  // Helper method to clean and parse JSON (matches your JS implementation)
   dynamic _cleanAndParseJson(String text) {
+    try {
+      // 1. Remove Markdown code fences if present
+      final cleaned = text.replaceAll(RegExp(r'```json', caseSensitive: false), '').replaceAll('```', '').trim();
+
+      // 2. Decode JSON directly
+      final decoded = jsonDecode(cleaned);
+
+      // 3. Enforce expected top-level type (array)
+      if (decoded is! List) {
+        throw const FormatException('Expected top-level JSON array');
+      }
+
+      return decoded;
+    } catch (e, stack) {
+      debugPrint('JSON parse error: $e');
+      debugPrintStack(stackTrace: stack);
+      return null;
+    }
+  }
+
+  // Helper method to clean and parse JSON (matches your JS implementation)
+  /*dynamic _cleanAndParseJson(String text) {
     try {
       // Remove markdown code blocks
       String cleaned = text.replaceAll(RegExp(r'```json', caseSensitive: false), '').replaceAll('```', '').trim();
@@ -1274,7 +1348,7 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
       debugPrint('JSON parse error: $e');
       return null;
     }
-  }
+  }*/
 }
 
 // Helper classes

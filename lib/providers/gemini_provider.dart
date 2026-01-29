@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/exam_config.dart';
+import '../models/exam_models.dart';
 
 class GeminiProvider with ChangeNotifier {
   // final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-3-flash-preview');

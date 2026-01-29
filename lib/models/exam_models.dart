@@ -175,6 +175,33 @@ class Question {
       'latexVersion': latexVersion,
     };
   }
+
+  Map<String, dynamic> toDBJson(String examId) {
+    return {
+      // 'id': id,
+      'exam_id': examId,
+      'section_id': sectionId,
+      'section_name': sectionName,
+      'question': text,
+      'concept': concept,
+      'difficulty': difficulty,
+      'type': type,
+      'marks': marks,
+      'model_answer': modelAnswer,
+      'rubric': rubric,
+      'options': options,
+      'matching_pairs': matchingPairs?.map((m) => m.toJson()).toList(),
+      'negative_value': negativeValue,
+      'allow_partial': allowPartial,
+      'is_or_type': isOrType,
+      'or_group_id': orGroupId,
+      'blooms_level': bloomsLevel,
+      'is_scenario': isScenario,
+      'scenario_text': scenarioText,
+      'sub_questions': subQuestions?.map((q) => q.toJson()).toList(),
+      'latex_version': latexVersion,
+    };
+  }
 }
 
 class SubQuestion {

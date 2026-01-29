@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:recase/recase.dart';
 import '../models/candidate_model.dart';
 import '../models/exam_config.dart';
+import '../models/exam_models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/exam_provider.dart';
 import '../providers/library_provider.dart';
@@ -1425,7 +1426,10 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
           onPressed: () async {
             if (_pageViewController.hasClients) {
               if (_pageViewController.page == 1) {
+                final examProvider = context.read<ExamProvider>();
                 await _pageViewController.animateToPage(2, duration: Duration(seconds: 3), curve: Curves.easeInOut);
+                if (!mounted) return;
+                examProvider.loadRecentExams();
               } else if (_pageViewController.page == 2) {
                 await _pageViewController.animateToPage(3, duration: Duration(seconds: 3), curve: Curves.easeInOut);
               }

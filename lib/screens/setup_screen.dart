@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/exam_config.dart';
+import '../models/exam_models.dart';
 import '../providers/supabase_provider.dart';
 import '../widgets/blueprint_selection_modal.dart';
 import '../widgets/concept_map_widget.dart';
