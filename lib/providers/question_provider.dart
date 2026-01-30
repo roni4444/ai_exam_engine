@@ -538,7 +538,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         })
         .join('\n\n');
   }
-
+  /*
   /// Parse JSON response from Gemini
   dynamic _parseJsonResponse(String text) {
     try {
@@ -567,7 +567,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       debugPrint('JSON parse error: $e');
       return null;
     }
-  }
+  }*/
 
   /// Calculate total questions to generate
   int _calculateTotalQuestions() {
