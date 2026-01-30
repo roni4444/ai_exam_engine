@@ -461,8 +461,8 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
     );
   }
 
-  void _startGeneration() {
-    context.read<QuestionProvider>().generateQuestions(widget.examId);
+  Future<void> _startGeneration() async {
+    await context.read<QuestionProvider>().generateQuestions(widget.examId);
   }
 
   int _calculateTotalQuestions() {

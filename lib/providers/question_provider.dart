@@ -1,6 +1,6 @@
 import 'package:ai_exam_engine/models/candidate_model.dart';
 import 'package:ai_exam_engine/models/exam_blueprint_model.dart';
-import 'package:ai_exam_engine/models/exam_config.dart' hide AnalyzedChapter;
+import 'package:ai_exam_engine/models/exam_config.dart';
 import 'package:firebase_ai/firebase_ai.dart' hide Candidate;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -114,8 +114,14 @@ class QuestionProvider extends ChangeNotifier {
               chapters: _currentChapters,
               bytes: bytes,
             );
+            // if (kDebugMode) {
+            //   print('The standard questions $scenarioQuestions of length ${scenarioQuestions.length}');
+            // }
             allQuestions.addAll(scenarioQuestions);
             currentProgress += scenarioQuestions.length;
+            // if (kDebugMode) {
+            //   print('The standard questions $scenarioQuestions of length ${scenarioQuestions.length}');
+            // }
             await _saveQuestionsToDb(scenarioQuestions);
           } else {
             // Batch process all standard questions of this type
@@ -127,8 +133,14 @@ class QuestionProvider extends ChangeNotifier {
               syllabusContext: syllabusContext,
               bytes: bytes,
             );
+            // if (kDebugMode) {
+            //   print('The standard questions $standardQuestions of length ${standardQuestions.length}');
+            // }
             allQuestions.addAll(standardQuestions);
             currentProgress += standardQuestions.length;
+            // if (kDebugMode) {
+            //   print('The standard questions $standardQuestions of length ${standardQuestions.length}');
+            // }
             await _saveQuestionsToDb(standardQuestions);
           }
 
@@ -596,13 +608,19 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
   /// Save questions to database
   Future<void> _saveQuestionsToDb(List<Question> questions) async {
     try {
+      /*if (kDebugMode) {
+        print('The $questions questions of length ${questions.length}');
+      }*/
       final batch = questions.map((q) => q.toDBJson(_currentExamId)).toList();
-      if (kDebugMode) {
+      /*if (kDebugMode) {
         print('Saving in $_currentExamId the $batch questions');
-      }
+      }*/
       // Insert in chunks of 100 to avoid payload size limits
       for (int i = 0; i < batch.length; i += 10) {
         final chunk = batch.skip(i).take(10).toList();
+        if (kDebugMode) {
+          print("chunk $chunk");
+        }
         await _supabase.from('questions').insert(chunk);
       }
     } catch (e) {
@@ -764,6 +782,9 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         syllabusContext: syllabusContext,
         bytes: bytes,
       );
+      // if (kDebugMode) {
+      //   print('The batch questions $batchQuestions of length ${batchQuestions.length}');
+      // }
 
       generatedQuestions.addAll(batchQuestions);
     }
@@ -899,8 +920,9 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         Rules:
         - Output must be a JSON array.
         - Each array item represents exactly ONE question.
+        - Each question must be unique
         - Each question MUST contain:
-        - "sectionIndex" (string)
+        - "sectionIndex" (integer)
         - "sectionName" (string)
         - "text" (string)
         - "concept" (string)
@@ -908,17 +930,17 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - "type" (string)
         - "modelAnswer" (string)
         - "bloomsLevel" (string)
-        - "latex" (string)
+        - "latexVersion" (string)
         - Never split the properties into separate objects.
         - Never omit required keys.
         - Do not add extra keys.
         - Do not add markdown or explanations.
         - MATH: Wrap ALL mathematical expressions, units, and chemical symbols in \$ signs (e.g. \$E=mc^2\$, \$12 \\text{V}\$, \$CO_2\$) for text based question.
-        - DOUBLE ESCAPE backslashes (e.g. "\\\\frac").
+        - Escape backslashes correctly for valid JSON strings
         - Latex version of the question should be perfectly generated
         - Distribute questions across sections proportionally
         - All LaTeX content must be Base64-encoded
-        - Do NOT include raw LaTeX anywhere
+        - Do NOT include raw LaTeX anywhere except the value of the latexVersion field
         - Do NOT wrap output in markdown
         - Encode LaTeX using UTF-8 before Base64
 
@@ -942,7 +964,18 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
           'marks': Schema.integer(description: 'Marks for this question'),
           'modelAnswer': Schema.string(description: 'Detailed answer'),
           'rubric': Schema.array(description: 'Marking rubric', items: Schema.string()),
-          'options': Schema.array(description: 'Options for MCQ only', items: Schema.string()),
+          'options': Schema.array(
+            description: 'Options for MCQ only',
+            items: Schema.object(
+              properties: {
+                "A": Schema.string(description: 'Option 1'),
+                "B": Schema.string(description: 'Option 2'),
+                "C": Schema.string(description: 'Option 3'),
+                "D": Schema.string(description: 'Option 4'),
+              },
+              optionalProperties: [],
+            ),
+          ),
           'matchingPairs': Schema.array(
             description: 'Matching pairs',
             items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
@@ -964,7 +997,18 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
                 'marks': Schema.integer(description: 'Marks for this sub-question'),
                 'modelAnswer': Schema.string(description: 'Detailed answer'),
                 'rubric': Schema.array(description: 'Marking rubric', items: Schema.string()),
-                'options': Schema.array(description: 'Options for MCQ only', items: Schema.string()),
+                'options': Schema.array(
+                  description: 'Options for MCQ only',
+                  items: Schema.object(
+                    properties: {
+                      "A": Schema.string(description: 'Option 1'),
+                      "B": Schema.string(description: 'Option 2'),
+                      "C": Schema.string(description: 'Option 3'),
+                      "D": Schema.string(description: 'Option 4'),
+                    },
+                    optionalProperties: [],
+                  ),
+                ),
                 'matchingPairs': Schema.array(
                   description: 'Matching pairs',
                   items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
@@ -989,12 +1033,12 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       Content.multi([prompt, docPart]),
     ], generationConfig: GenerationConfig(responseMimeType: 'application/json', responseSchema: responseSchema));
     // Parse and distribute results back to appropriate sections
-    if (kDebugMode) {
-      debugPrint("response: ${response.text}");
-      debugPrint("tasks: $tasks");
-      debugPrint("batch: $batch");
-    }
-    return _parseStandardBatchResponse(response.text ?? "", tasks, batch, examId);
+    // if (kDebugMode) {
+    //   debugPrint("response: ${response.text}");
+    //   debugPrint("tasks: $tasks");
+    //   debugPrint("batch: $batch");
+    // }
+    return await _parseStandardBatchResponse(response.text ?? "", tasks, batch, examId);
   }
 
   // Build prompt for batch scenario generation
@@ -1187,24 +1231,24 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
 
   // Parse standard questions batch response
   Future<List<Question>> _parseStandardBatchResponse(String response, List<QuestionTypeTask> tasks, int batch, String examId) async {
-    final List<Question> generatedQuestions = [];
+    List<Question> generatedQuestions = [];
 
     try {
       final rawBatch = _cleanAndParseJson(response);
 
-      if (rawBatch is! List) {
-        debugPrint('Expected array response for standard batch');
-        return generatedQuestions;
-      }
+      // if (rawBatch is! List) {
+      //   debugPrint('Expected array response for standard batch');
+      //   return generatedQuestions;
+      // }
 
-      if (kDebugMode) {
-        debugPrint("raw batch: $rawBatch");
-      }
+      // if (kDebugMode) {
+      //   debugPrint("raw batch: $rawBatch");
+      // }
 
       for (var qData in rawBatch) {
-        if (kDebugMode) {
-          debugPrint("qData: $qData");
-        }
+        // if (kDebugMode) {
+        //   debugPrint("qData: $qData");
+        // }
         final sectionIndex = qData['sectionIndex'] as int?;
 
         if (sectionIndex == null || sectionIndex >= tasks.length) {
