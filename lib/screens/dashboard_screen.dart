@@ -5,6 +5,7 @@ import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
 import 'package:ai_exam_engine/screens/question_generation_screen.dart';
 import 'package:ai_exam_engine/screens/review_questions_screen.dart';
 import 'package:ai_exam_engine/screens/settings_screen.dart';
+import 'package:ai_exam_engine/screens/simulation_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   TextEditingController nameController = TextEditingController();
   late PageController _pageViewController;
   List<ExamSection> sections = [];
+  List<Question> _questions = [];
   int selectedIndex = 0;
   int processIndex = -10;
   // final TextEditingController _controller = TextEditingController();
@@ -440,6 +442,9 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                           color: const Color(0xFF059669),
                                           onTap: () {
                                             // Navigate to direct grading
+                                            setState(() {
+                                              _pageViewController.jumpToPage(3);
+                                            });
                                           },
                                         ),
                                       ],
@@ -976,8 +981,8 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                         ),
                       ),
                       SetupScreen(onNext: onSetupScreenNext),
-                      QuestionGenerationScreen(examId: _examId, config: _config),
-                      ReviewQuestionsScreen(),
+                      QuestionGenerationScreen(examId: _examId, config: _config, onNext: onQuestionScreenNext),
+                      SimulationScreen(),
                     ],
                   ),
                 ),
@@ -1586,6 +1591,14 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
       // _libraryProcessingStatus = ProcessingStatus.completed;
     });*/
     // return;
+  }
+
+  Future<void> onQuestionScreenNext({required List<Question> questions}) async {
+    // Navigator.of(context).pop();
+    final supabase = context.read<SupabaseProvider>();
+    final user = supabase.client.auth.currentSession?.user.id;
+    if (user == null) return;
+    _questions = questions;
   }
 }
 

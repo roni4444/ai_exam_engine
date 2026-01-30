@@ -5,7 +5,9 @@ import '../widgets/stat_card_widget.dart';
 import 'simulation_screen.dart';
 
 class ReviewQuestionsScreen extends StatefulWidget {
-  const ReviewQuestionsScreen({super.key});
+  final List<Question> questions;
+
+  const ReviewQuestionsScreen({super.key, required this.questions});
 
   @override
   State<ReviewQuestionsScreen> createState() => _ReviewQuestionsScreenState();
@@ -16,7 +18,7 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
   bool _isDownloading = false;
 
   // Mock questions for demo
-  final List<Question> _mockQuestions = [
+  /*final List<Question> _mockQuestions = [
     Question(
       id: 'q1',
       sectionId: 's1',
@@ -72,7 +74,7 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
       examId: '',
       latexVersion: '',
     ),
-  ];
+  ];*/
 
   Future<void> _downloadQuestions() async {
     setState(() => _isDownloading = true);
@@ -111,13 +113,13 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
                   ],
                 ),
                 SizedBox(width: MediaQuery.widthOf(context) / 3),
-                StatCard(label: 'Total Questions', value: _mockQuestions.length.toString(), color: const Color(0xFF2563EB)),
+                StatCard(label: 'Total Questions', value: widget.questions.length.toString(), color: const Color(0xFF2563EB)),
                 const SizedBox(width: 16),
-                StatCard(label: 'Total Marks', value: _mockQuestions.fold(0, (sum, q) => sum + q.marks).toString(), color: const Color(0xFF7C3AED)),
+                StatCard(label: 'Total Marks', value: widget.questions.fold(0, (sum, q) => sum + q.marks).toString(), color: const Color(0xFF7C3AED)),
                 const SizedBox(width: 16),
                 StatCard(
                   label: 'Sections',
-                  value: _mockQuestions.map((q) => q.sectionName).toSet().length.toString(),
+                  value: widget.questions.map((q) => q.sectionName).toSet().length.toString(),
                   color: const Color(0xFF059669),
                 ),
               ],
@@ -165,9 +167,9 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(24),
-              itemCount: _mockQuestions.length,
+              itemCount: widget.questions.length,
               itemBuilder: (context, index) {
-                final question = _mockQuestions[index];
+                final question = widget.questions[index];
                 return QuestionCard(question: question, number: index + 1);
               },
             ),

@@ -114,14 +114,10 @@ class QuestionProvider extends ChangeNotifier {
               chapters: _currentChapters,
               bytes: bytes,
             );
-            // if (kDebugMode) {
-            //   print('The standard questions $scenarioQuestions of length ${scenarioQuestions.length}');
-            // }
+
             allQuestions.addAll(scenarioQuestions);
             currentProgress += scenarioQuestions.length;
-            // if (kDebugMode) {
-            //   print('The standard questions $scenarioQuestions of length ${scenarioQuestions.length}');
-            // }
+
             await _saveQuestionsToDb(scenarioQuestions);
           } else {
             // Batch process all standard questions of this type
@@ -133,14 +129,10 @@ class QuestionProvider extends ChangeNotifier {
               syllabusContext: syllabusContext,
               bytes: bytes,
             );
-            // if (kDebugMode) {
-            //   print('The standard questions $standardQuestions of length ${standardQuestions.length}');
-            // }
+
             allQuestions.addAll(standardQuestions);
             currentProgress += standardQuestions.length;
-            // if (kDebugMode) {
-            //   print('The standard questions $standardQuestions of length ${standardQuestions.length}');
-            // }
+
             await _saveQuestionsToDb(standardQuestions);
           }
 
@@ -645,20 +637,44 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         _libraryId = findId['library_id'];
         _candidateGroupId = findId['candidate_group_id'];
         _examBlueprintId = findId['exam_blueprint_id'];
+        print("$examId : $_currentExamId $_libraryId $_candidateGroupId $_examBlueprintId");
       }
       try {
         final response1 = await _supabase.from('questions').select().eq('exam_id', _currentExamId);
-        _questions = (response1 as List).map((json) => Question.fromJson(json)).toList();
+        print("response1 $response1");
+        _questions = (response1 as List).map((json) => Question.fromDBJson(json)).toList();
+        notifyListeners();
+      } catch (e) {
+        _error = e.toString();
+        print("_questions error $e");
+        notifyListeners();
+      }
+      try {
         final response2 = await _supabase.from('chapters').select().eq('file_id', _libraryId);
         _currentChapters = (response2 as List).map((json) => AnalyzedChapter.fromJson(json)).toList();
         _importantChapters = (response2 as List).map((json) => json['importantChapters'].toString()).toList();
         _fileName = (response2 as List).map((json) => json['file_name'].toString()).toList().first;
+        notifyListeners();
+      } catch (e) {
+        _error = e.toString();
+        print("response2 error $e");
+        notifyListeners();
+      }
+      try {
         _currentCandidates = await getCandidatesForGroup(_candidateGroupId);
+        notifyListeners();
+      } catch (e) {
+        _error = e.toString();
+        print("_currentCandidates error $e");
+        notifyListeners();
+      }
+      try {
         final response4 = await _supabase.from('exam_blueprints').select().eq('id', _examBlueprintId).single();
         _examBlueprint = ExamBlueprint.fromJson(response4);
         notifyListeners();
       } catch (e) {
         _error = e.toString();
+        print("response4 error $e");
         notifyListeners();
       }
     }

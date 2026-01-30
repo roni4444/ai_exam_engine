@@ -1,4 +1,5 @@
 import 'package:ai_exam_engine/models/exam_config.dart';
+import 'package:ai_exam_engine/screens/review_questions_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,10 +7,11 @@ import '../models/exam_models.dart';
 import '../providers/question_provider.dart';
 
 class QuestionGenerationScreen extends StatefulWidget {
+  final Function({required List<Question> questions})? onNext;
   final String? examId;
   final ExamConfig? config;
 
-  const QuestionGenerationScreen({super.key, this.examId, required this.config});
+  const QuestionGenerationScreen({super.key, this.examId, required this.config, this.onNext});
 
   @override
   State<QuestionGenerationScreen> createState() => _QuestionGenerationScreenState();
@@ -21,10 +23,12 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
   @override
   void initState() {
     super.initState();
+    final provider = context.read<QuestionProvider>();
     // Check if questions already exist
-    if (context.read<QuestionProvider>().questions.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<QuestionProvider>().loadQuestions(widget.examId);
+    if (provider.questions.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await provider.loadQuestions(widget.examId);
+        setState(() {});
       });
     }
   }
@@ -45,6 +49,7 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
 
           // Show questions pool report if generation complete
           if (provider.questions.isNotEmpty && !provider.isGenerating) {
+            widget.onNext?.call(questions: provider.questions);
             return _buildQuestionPoolReport(provider.questions);
           }
 
@@ -279,7 +284,14 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
           ),
           const SizedBox(height: 32),
 
-          // Questions Preview
+          ElevatedButton(
+            onPressed: () => showDialog(
+              context: context,
+              builder: (context) => ReviewQuestionsScreen(questions: questions),
+            ),
+            child: Text("Review Questions"),
+          ),
+          /*// Questions Preview
           const Text(
             'Question Preview',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
@@ -297,7 +309,7 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
                   style: TextStyle(color: Colors.grey.shade600, fontStyle: FontStyle.italic),
                 ),
               ),
-            ),
+            ),*/
           /*
           const SizedBox(height: 32),
 

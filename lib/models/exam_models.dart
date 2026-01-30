@@ -176,6 +176,33 @@ class Question {
     };
   }
 
+  factory Question.fromDBJson(Map<String, dynamic> json) {
+    return Question(
+      id: json['id'],
+      examId: json['exam_id'],
+      sectionId: json['section_id'] ?? '',
+      sectionName: json['section_name'] ?? '',
+      text: json['question'],
+      concept: json['concept'] ?? '',
+      difficulty: json['difficulty'],
+      type: json['type'],
+      marks: json['marks'],
+      modelAnswer: json['model_answer'] ?? '',
+      rubric: List<String>.from(json['rubric'] ?? []),
+      options: json['options'] != null ? List<String>.from(json['options']) : null,
+      matchingPairs: json['matching_pairs'] != null ? (json['matching_pairs'] as List).map((m) => MatchingPair.fromJson(m)).toList() : null,
+      negativeValue: (json['negative_value'] ?? 0.0).toDouble(),
+      allowPartial: json['allow_partial'] ?? false,
+      isOrType: json['is_or_type'] ?? false,
+      orGroupId: json['or_group_id'],
+      bloomsLevel: json['blooms_level'],
+      isScenario: json['is_scenario'] ?? false,
+      scenarioText: json['scenario_text'],
+      subQuestions: json['sub_questions'] != null ? (json['sub_questions'] as List).map((q) => SubQuestion.fromJson(q)).toList() : null,
+      latexVersion: json['latex_version'],
+    );
+  }
+
   Map<String, dynamic> toDBJson(String examId) {
     return {
       // 'id': id,
