@@ -83,8 +83,8 @@ class QuestionCard extends StatelessWidget {
               ),
               if (question.options != null) ...[
                 const SizedBox(height: 12),
-                ...question.options!.first.substring(1, question.options!.first.length - 1).split(",").map((option) {
-                  return Padding(
+                ...question.options!.entries.map(
+                  (entry) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
@@ -96,17 +96,17 @@ class QuestionCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Center(
-                            child: Text(option.split(":").first, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            child: Text(entry.key, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(option.split(":").last, style: TextStyle(color: Colors.grey[700])),
+                          child: Text(entry.value, style: TextStyle(color: Colors.grey[700])),
                         ),
                       ],
                     ),
-                  );
-                }),
+                  ),
+                ),
               ],
               const SizedBox(height: 12),
               Wrap(

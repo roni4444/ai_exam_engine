@@ -111,7 +111,7 @@ class PdfService {
                               pw.Text('[ ${question.marks} Marks ]', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
                             ],
                           ),
-                          if (question.options != null) ...[
+                          /*if (question.options != null) ...[
                             pw.SizedBox(height: 10),
                             ...question.options!.asMap().entries.map((entry) {
                               return pw.Padding(
@@ -119,7 +119,7 @@ class PdfService {
                                 child: pw.Text('${String.fromCharCode(65 + entry.key)}. ${entry.value}', style: const pw.TextStyle(fontSize: 12)),
                               );
                             }),
-                          ],
+                          ],*/
                           pw.SizedBox(height: 10),
                           pw.Row(
                             children: [

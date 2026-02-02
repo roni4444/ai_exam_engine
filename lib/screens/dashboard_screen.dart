@@ -9,6 +9,7 @@ import 'package:ai_exam_engine/screens/simulation_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 import 'package:recase/recase.dart';
 import '../models/candidate_model.dart';
@@ -123,13 +124,18 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
     final supabaseClient = context.read<SupabaseProvider>();
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: MediaQuery.of(context).size.longestSide / 8 + MediaQuery.of(context).size.longestSide / 7,
+        leadingWidth: MediaQuery.of(context).size.longestSide / 8 + MediaQuery.of(context).size.longestSide / 6,
         leading: Padding(
-          padding: EdgeInsets.only(left: MediaQuery.of(context).size.longestSide / 7),
+          padding: EdgeInsets.only(left: MediaQuery.of(context).size.longestSide / 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
+              SizedBox(
+                width: 120,
+                height: 120,
+                child: SvgPicture.asset("assets/logo/AI_Exam_Engine_Logo.svg", semanticsLabel: 'AI Exam Engine Logo'),
+              ),
+              /*Container(
                 // width: 60,
                 // height: 60,
                 decoration: BoxDecoration(
@@ -142,12 +148,12 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                   boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withValues(alpha: 255 * 0.3), blurRadius: 30, spreadRadius: 5)],
                 ),
                 child: const Icon(Icons.psychology, size: 40, color: Colors.white),
-              ),
-              const SizedBox(width: 5),
+              ),*/
+              // const SizedBox(width: 5),
               Expanded(
                 child: const Text(
                   'AI Exam Engine',
-                  style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.black, fontSize: 25, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -262,6 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                 _pageViewController.jumpToPage(0);
                 if (selectedIndex == 0) {
                   context.read<ExamProvider>().loadRecentExams();
+                  context.read<QuestionProvider>().cancelGeneration();
                 }
                 if (selectedIndex == 1) {
                   context.read<LibraryProvider>().loadLibraryFiles();

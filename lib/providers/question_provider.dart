@@ -19,7 +19,7 @@ class QuestionTypeTask {
 class QuestionProvider extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  late String _currentExamId;
+  String? _currentExamId;
   late String _libraryId;
   late String _candidateGroupId;
   late String _examBlueprintId;
@@ -38,7 +38,7 @@ class QuestionProvider extends ChangeNotifier {
   bool get isGenerating => _isGenerating;
   String? get error => _error;
   // ExamBlueprint get examBlueprint => _examBlueprint;
-  // String get currentExamId => _currentExamId;
+  String? get currentExamId => _currentExamId;
   // String get libraryId => _libraryId;
   // String get candidateGroupId => _candidateGroupId;
   // String get examBlueprintId => _examBlueprintId;
@@ -48,7 +48,7 @@ class QuestionProvider extends ChangeNotifier {
   // String get fileName => _fileName;
 
   /// Start question generation directly in Flutter
-  Future<void> generateQuestions(String? examId) async {
+  Future<void> generateQuestions(String examId) async {
     _isGenerating = true;
     _error = null;
     await loadQuestions(examId);
@@ -65,19 +65,20 @@ class QuestionProvider extends ChangeNotifier {
 
     try {
       // Update progress in database
-      await _updateProgressInDb(_progress!);
+      // await _updateProgressInDb(_progress!);
       // print("object");
       // Build syllabus context
       final syllabusContext = _buildSyllabusContext();
       final allQuestions = <Question>[];
 
       final batchCount = (_currentCandidates.length);
+      print(batchCount);
       int currentProgress = 0;
 
       // Update to generating status
       _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'preparing batches');
       notifyListeners();
-      await _updateProgressInDb(_progress!);
+      // await _updateProgressInDb(_progress!);
 
       // Generate questions in batches by question type
       // for (int batch = 0; batch < batchCount; batch++) {
@@ -99,6 +100,7 @@ class QuestionProvider extends ChangeNotifier {
           questionTypeGroups[typeKey]!.add(QuestionTypeTask(section: section, questionType: qt));
         }
       }
+
       // Process each question type group in batch
       for (var entry in questionTypeGroups.entries) {
         final String typeName = entry.key;
@@ -108,7 +110,7 @@ class QuestionProvider extends ChangeNotifier {
           if (typeName == 'Scenario Based') {
             // Batch process all scenario questions of this type
             final scenarioQuestions = await _generateScenarioBatch(
-              examId: _currentExamId,
+              examId: examId,
               batch: batchCount,
               tasks: tasks,
               chapters: _currentChapters,
@@ -122,7 +124,7 @@ class QuestionProvider extends ChangeNotifier {
           } else {
             // Batch process all standard questions of this type
             final standardQuestions = await _generateStandardQuestionsBatch(
-              examId: _currentExamId,
+              examId: examId,
               batch: batchCount,
               typeName: typeName,
               tasks: tasks,
@@ -131,15 +133,15 @@ class QuestionProvider extends ChangeNotifier {
             );
 
             allQuestions.addAll(standardQuestions);
-            currentProgress += standardQuestions.length;
+            // currentProgress += standardQuestions.length;
 
-            await _saveQuestionsToDb(standardQuestions);
+            // await _saveQuestionsToDb(standardQuestions);
           }
 
           // Update progress after each question type batch
           _progress = QuestionGenerationProgress(current: currentProgress, total: totalQuestions, status: 'generating $typeName');
           notifyListeners();
-          await _updateProgressInDb(_progress!);
+          // await _updateProgressInDb(_progress!);
         } catch (e) {
           debugPrint('Failed to generate questions for type $typeName: $e');
         }
@@ -222,14 +224,14 @@ class QuestionProvider extends ChangeNotifier {
       _progress = QuestionGenerationProgress(current: allQuestions.length, total: allQuestions.length, status: 'completed', isComplete: true);
       _isGenerating = false;
       notifyListeners();
-      await _updateProgressInDb(_progress!);
+      // await _updateProgressInDb(_progress!);
     } catch (e) {
       _error = e.toString();
       _isGenerating = false;
 
       _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'failed', error: e.toString());
       notifyListeners();
-      await _updateProgressInDb(_progress!);
+      // await _updateProgressInDb(_progress!);
       rethrow;
     }
   }
@@ -580,7 +582,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     return total * (_currentCandidates.length).clamp(1, 5);
   }
 
-  /// Update progress in database
+  /*/// Update progress in database
   Future<void> _updateProgressInDb(QuestionGenerationProgress progress) async {
     try {
       await _supabase.from('question_generation_progress').upsert({
@@ -595,7 +597,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     } catch (e) {
       debugPrint('Failed to update progress in DB: $e');
     }
-  }
+  }*/
 
   /// Save questions to database
   Future<void> _saveQuestionsToDb(List<Question> questions) async {
@@ -603,7 +605,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       /*if (kDebugMode) {
         print('The $questions questions of length ${questions.length}');
       }*/
-      final batch = questions.map((q) => q.toDBJson(_currentExamId)).toList();
+      final batch = questions.map((q) => q.toDBJson(examId: _currentExamId ?? "")).toList();
       /*if (kDebugMode) {
         print('Saving in $_currentExamId the $batch questions');
       }*/
@@ -617,6 +619,16 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       }
     } catch (e) {
       debugPrint('Failed to save questions to DB: $e');
+      rethrow;
+    }
+  }
+
+  /// Save a question to database
+  Future<void> _saveQuestionToDb(Question question) async {
+    try {
+      await _supabase.from('questions').insert(question.toDBJson(examId: _currentExamId ?? ""));
+    } catch (e) {
+      debugPrint('Failed to save question ${question.text} of ${question.id} to DB: $e');
       rethrow;
     }
   }
@@ -640,13 +652,15 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         print("$examId : $_currentExamId $_libraryId $_candidateGroupId $_examBlueprintId");
       }
       try {
-        final response1 = await _supabase.from('questions').select().eq('exam_id', _currentExamId);
-        print("response1 $response1");
+        final response1 = await _supabase.from('questions').select().eq('exam_id', _currentExamId ?? "");
+        // print("response1 $response1");
+        (response1 as List).map((json) => print((json as Map<String, dynamic>).entries.where((test) => test.value == null).toList())).toList();
         _questions = (response1 as List).map((json) => Question.fromDBJson(json)).toList();
         notifyListeners();
       } catch (e) {
         _error = e.toString();
         print("_questions error $e");
+
         notifyListeners();
       }
       try {
@@ -657,7 +671,9 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         notifyListeners();
       } catch (e) {
         _error = e.toString();
+
         print("response2 error $e");
+
         notifyListeners();
       }
       try {
@@ -852,48 +868,138 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     final responseSchema = Schema.array(
       items: Schema.object(
         properties: {
-          'scenarioIndex': Schema.string(description: 'Match scenarioIndex to the input requests'),
-          'scenarioText': Schema.string(description: 'The detailed paragraph...'),
+          'sectionIndex': Schema.integer(description: 'Section No'),
+          'sectionName': Schema.string(description: 'Section name'),
+          'question': Schema.string(description: 'Question text'),
+          'concept': Schema.string(description: 'Related concept name'),
+          'difficulty': Schema.string(description: 'Easy|Medium|Hard'),
+          'type': Schema.string(description: 'Scenario Based'),
+          'marks': Schema.integer(description: 'Marks for this question'),
+          'modelAnswer': Schema.string(description: 'Detailed answer'),
+          'correctOption': Schema.string(description: 'The correct answer for MCQ only'),
+          'rubric': Schema.array(description: 'Marking rubric', items: Schema.string()),
+          'options': Schema.object(
+            description: 'Options for MCQ only',
+            properties: {
+              "A": Schema.string(description: 'Option 1'),
+              "B": Schema.string(description: 'Option 2'),
+              "C": Schema.string(description: 'Option 3'),
+              "D": Schema.string(description: 'Option 4'),
+            },
+            optionalProperties: [],
+          ),
+          'matchingPairs': Schema.array(
+            description: 'Matching pairs',
+            items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
+          ),
+          'negativeValue': Schema.number(description: 'Negative marking value'),
+          'allowPartial': Schema.boolean(description: 'Allow partial marking'),
+          'isOrType': Schema.boolean(description: 'Is OR question'),
+          'orGroupId': Schema.string(description: 'UUID for OR group'),
+          'bloomsLevel': Schema.string(description: 'Remember|Understand|Apply|Analyze|Evaluate|Create'),
+          'isScenario': Schema.boolean(description: 'Scenario based question'),
+          'scenarioID': Schema.string(description: 'UUID for the Scenario'),
+          'scenarioText': Schema.string(description: 'Scenario context'),
           'subQuestions': Schema.array(
-            description: 'sub-questions for scenario questions only',
             items: Schema.object(
               properties: {
-                'text': Schema.string(description: 'Question text...'),
+                'question': Schema.string(description: 'Sub-question text'),
                 'concept': Schema.string(description: 'Related concept name'),
                 'difficulty': Schema.string(description: 'Easy|Medium|Hard'),
-                'type': Schema.string(description: "Type from requirement"),
-                'modelAnswer': Schema.string(description: 'Detailed answer...'),
-                'rubric': Schema.string(description: 'Explain how to answer or how marks will be awarded in few words'),
-                'options (MCQ)': Schema.array(
-                  description: 'options for MCQ questions only',
-                  items: Schema.object(
-                    properties: {
-                      "A": Schema.string(description: 'Option 1'),
-                      "B": Schema.string(description: 'Option 2'),
-                      "C": Schema.string(description: 'Option 3'),
-                      "D": Schema.string(description: 'Option 4'),
-                    },
-                    optionalProperties: [],
-                  ),
+                'type': Schema.string(description: 'Scenario Based'),
+                'marks': Schema.integer(description: 'Marks for this sub-question'),
+                'modelAnswer': Schema.string(description: 'Detailed answer of the sub-question'),
+                'correctOption': Schema.string(description: 'The correct answer for MCQ only'),
+                'rubric': Schema.array(description: 'Marking rubric', items: Schema.string()),
+                'options': Schema.object(
+                  description: 'Options for MCQ only',
+                  properties: {
+                    "A": Schema.string(description: 'Option 1'),
+                    "B": Schema.string(description: 'Option 2'),
+                    "C": Schema.string(description: 'Option 3'),
+                    "D": Schema.string(description: 'Option 4'),
+                  },
+                  optionalProperties: [],
                 ),
-                "matchingPairs": Schema.array(
-                  description: 'matching pairs for matching questions only',
-                  items: Schema.object(
-                    properties: {
-                      "left": Schema.string(description: 'Left side of the pair'),
-                      "right": Schema.string(description: 'Right side of the pair'),
-                    },
-                    optionalProperties: [],
-                  ),
+                'matchingPairs': Schema.array(
+                  description: 'Matching pairs',
+                  items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
                 ),
-                'latex': Schema.string(description: 'Latex version of the question'),
+                'negativeValue': Schema.number(description: 'Negative marking value'),
+                'allowPartial': Schema.boolean(description: 'Allow partial marking'),
                 'bloomsLevel': Schema.string(description: 'Remember|Understand|Apply|Analyze|Evaluate|Create'),
+                'latexVersion': Schema.object(
+                  properties: {
+                    'question': Schema.string(description: 'LaTeX version of the sub-question in Base64-encoded LaTeX source (UTF-8)'),
+                    'answer': Schema.string(description: 'LaTeX version of the answer of the sub-question in Base64-encoded LaTeX source (UTF-8)'),
+                    'rubric': Schema.string(description: 'LaTeX version of the rubric in Base64-encoded LaTeX source (UTF-8)'),
+                    'matchingPairs': Schema.array(
+                      description: 'LaTeX version of the matching pairs in Base64-encoded LaTeX source (UTF-8)',
+                      items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
+                    ),
+                    'options': Schema.object(
+                      description: 'LaTeX version of the options in Base64-encoded LaTeX source (UTF-8)',
+                      properties: {
+                        "A": Schema.string(description: 'Option 1'),
+                        "B": Schema.string(description: 'Option 2'),
+                        "C": Schema.string(description: 'Option 3'),
+                        "D": Schema.string(description: 'Option 4'),
+                      },
+                      optionalProperties: [],
+                    ),
+                    'correctOption': Schema.string(description: 'LaTeX version of the correct option in Base64-encoded LaTeX source (UTF-8)'),
+                  },
+                  optionalProperties: ['options', 'matchingPairs', 'correctOption', 'scenarioText'],
+                ),
+
+                'latexPackages': Schema.string(
+                  description:
+                      'A single string containing all necessary LaTeX preamble declarations required to successfully render every LaTeX snippet generated in the "latexVersion" array. Include packages for math symbols, chemical equations, tables, or special formatting used in the questions and answers.',
+                ),
+                'latexEngine': Schema(
+                  SchemaType.string,
+                  description: 'The LaTeX engine to use for rendering the LaTeX content.',
+                  enumValues: ['pdflatex', 'lualatex'],
+                ),
               },
+              optionalProperties: ['options', 'matchingPairs', 'orGroupId', 'correctOption'],
             ),
           ),
+          'latexVersion': Schema.object(
+            properties: {
+              'question': Schema.string(description: 'LaTeX version of the question in Base64-encoded LaTeX source (UTF-8)'),
+              'answer': Schema.string(description: 'LaTeX version of the answer in Base64-encoded LaTeX source (UTF-8)'),
+              'rubric': Schema.string(description: 'LaTeX version of the rubric in Base64-encoded LaTeX source (UTF-8)'),
+              'matchingPairs': Schema.array(
+                description: 'LaTeX version of the matching pairs in Base64-encoded LaTeX source (UTF-8)',
+                items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
+              ),
+              'options': Schema.object(
+                description: 'LaTeX version of the options in Base64-encoded LaTeX source (UTF-8)',
+                properties: {
+                  "A": Schema.string(description: 'Option 1'),
+                  "B": Schema.string(description: 'Option 2'),
+                  "C": Schema.string(description: 'Option 3'),
+                  "D": Schema.string(description: 'Option 4'),
+                },
+                optionalProperties: [],
+              ),
+              'correctOption': Schema.string(description: 'LaTeX version of the correct option in Base64-encoded LaTeX source (UTF-8)'),
+              'scenarioText': Schema.string(description: 'LaTeX version of the scenario text in Base64-encoded LaTeX source (UTF-8)'),
+            },
+            optionalProperties: ['options', 'matchingPairs', 'correctOption', 'scenarioText'],
+          ),
+          'latexPackages': Schema.string(
+            description:
+                'A single string containing all necessary LaTeX preamble declarations required to successfully render every LaTeX snippet generated in the "latexVersion" array. Include packages for math symbols, chemical equations, tables, or special formatting used in the questions and answers.',
+          ),
+          'latexEngine': Schema(
+            SchemaType.string,
+            description: 'The LaTeX engine to use for rendering the LaTeX content.',
+            enumValues: ['pdflatex', 'lualatex'],
+          ),
         },
-        // 🚨 IMPORTANT: NOTHING optional here
-        optionalProperties: ['rubric', 'options (MCQ)'],
+        optionalProperties: ['options', 'matchingPairs', 'orGroupId', 'scenarioText', 'subQuestions', 'correctOption'],
       ),
     );
     // Gemini call
@@ -902,7 +1008,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     ], generationConfig: GenerationConfig(responseMimeType: 'application/json', responseSchema: responseSchema));
 
     // Parse and distribute results back to appropriate sections
-    return _parseScenarioBatchResponse(response.text ?? "", requests, batch, examId);
+    return []; //_parseScenarioBatchResponse(response.text ?? "", requests, batch, examId);
   }
 
   // Single API call for multiple standard questions
@@ -951,14 +1057,17 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - Never omit required keys.
         - Do not add extra keys.
         - Do not add markdown or explanations.
-        - MATH: Wrap ALL mathematical expressions, units, and chemical symbols in \$ signs (e.g. \$E=mc^2\$, \$12 \\text{V}\$, \$CO_2\$) for text based question.
         - Escape backslashes correctly for valid JSON strings
         - Latex version of the question should be perfectly generated
         - Distribute questions across sections proportionally
         - All LaTeX content must be Base64-encoded
-        - Do NOT include raw LaTeX anywhere except the value of the latexVersion field
+        - Do NOT include raw LaTeX anywhere except the value of the latexVersion array
         - Do NOT wrap output in markdown
-        - Encode LaTeX using UTF-8 before Base64
+        - Scan all generated content for specialized notation like complex math, chemistry, or unique Unicode characters.
+        - Explicitly list every required package in the latexPackages field to ensure the code compiles without errors.
+        - Select pdflatex for standard math, or lualatex if the content requires advanced fonts or complex graphics.
+        - Convert all final LaTeX source strings into strictly Base64-encoded UTF-8 format with proper padding before returning the response
+        - When generating LaTeX content, ensure that any packages required for specialized notation (like chemical bonds, complex matrices, or commutative diagrams) are explicitly listed in the latexPackages field.
 
         Model Answer rules:
         - Each Model Answer should be the proper answer of the question justifying the rubric (if present) separately.
@@ -973,24 +1082,23 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         properties: {
           'sectionIndex': Schema.integer(description: 'Section No'),
           'sectionName': Schema.string(description: 'Section name'),
-          'text': Schema.string(description: 'Question text'),
+          'question': Schema.string(description: 'Question text'),
           'concept': Schema.string(description: 'Related concept name'),
           'difficulty': Schema.string(description: 'Easy|Medium|Hard'),
           'type': Schema.string(description: typeName),
           'marks': Schema.integer(description: 'Marks for this question'),
           'modelAnswer': Schema.string(description: 'Detailed answer'),
+          'correctOption': Schema.string(description: 'The correct answer for MCQ only'),
           'rubric': Schema.array(description: 'Marking rubric', items: Schema.string()),
-          'options': Schema.array(
+          'options': Schema.object(
             description: 'Options for MCQ only',
-            items: Schema.object(
-              properties: {
-                "A": Schema.string(description: 'Option 1'),
-                "B": Schema.string(description: 'Option 2'),
-                "C": Schema.string(description: 'Option 3'),
-                "D": Schema.string(description: 'Option 4'),
-              },
-              optionalProperties: [],
-            ),
+            properties: {
+              "A": Schema.string(description: 'Option 1'),
+              "B": Schema.string(description: 'Option 2'),
+              "C": Schema.string(description: 'Option 3'),
+              "D": Schema.string(description: 'Option 4'),
+            },
+            optionalProperties: [],
           ),
           'matchingPairs': Schema.array(
             description: 'Matching pairs',
@@ -1001,59 +1109,46 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
           'isOrType': Schema.boolean(description: 'Is OR question'),
           'orGroupId': Schema.string(description: 'UUID for OR group'),
           'bloomsLevel': Schema.string(description: 'Remember|Understand|Apply|Analyze|Evaluate|Create'),
-          'isScenario': Schema.boolean(description: 'Scenario based question'),
-          'scenarioText': Schema.string(description: 'Scenario context'),
-          'subQuestions': Schema.array(
-            items: Schema.object(
-              properties: {
-                'text': Schema.string(description: 'Sub-question text'),
-                'concept': Schema.string(description: 'Related concept name'),
-                'difficulty': Schema.string(description: 'Easy|Medium|Hard'),
-                'type': Schema.string(description: typeName),
-                'marks': Schema.integer(description: 'Marks for this sub-question'),
-                'modelAnswer': Schema.string(description: 'Detailed answer'),
-                'rubric': Schema.array(description: 'Marking rubric', items: Schema.string()),
-                'options': Schema.array(
-                  description: 'Options for MCQ only',
-                  items: Schema.object(
-                    properties: {
-                      "A": Schema.string(description: 'Option 1'),
-                      "B": Schema.string(description: 'Option 2'),
-                      "C": Schema.string(description: 'Option 3'),
-                      "D": Schema.string(description: 'Option 4'),
-                    },
-                    optionalProperties: [],
-                  ),
-                ),
-                'matchingPairs': Schema.array(
-                  description: 'Matching pairs',
-                  items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
-                ),
-                'negativeValue': Schema.number(description: 'Negative marking value'),
-                'allowPartial': Schema.boolean(description: 'Allow partial marking'),
-                'isOrType': Schema.boolean(description: 'Is OR sub-question'),
-                'orGroupId': Schema.string(description: 'UUID for OR group'),
-                'bloomsLevel': Schema.string(description: 'Remember|Understand|Apply|Analyze|Evaluate|Create'),
-                'latexVersion': Schema.string(description: 'LaTeX version of the sub-question in Base64-encoded LaTeX source (UTF-8)'),
-              },
-              optionalProperties: ['options', 'matchingPairs', 'orGroupId'],
-            ),
+          'latexVersion': Schema.object(
+            properties: {
+              'question': Schema.string(description: 'LaTeX version of the question in Base64-encoded LaTeX source (UTF-8)'),
+              'answer': Schema.string(description: 'LaTeX version of the answer in Base64-encoded LaTeX source (UTF-8)'),
+              'rubric': Schema.string(description: 'LaTeX version of the rubric in Base64-encoded LaTeX source (UTF-8)'),
+              'matchingPairs': Schema.array(
+                description: 'LaTeX version of the matching pairs in Base64-encoded LaTeX source (UTF-8)',
+                items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
+              ),
+              'options': Schema.object(
+                description: 'LaTeX version of the options in Base64-encoded LaTeX source (UTF-8)',
+                properties: {
+                  "A": Schema.string(description: 'Option 1'),
+                  "B": Schema.string(description: 'Option 2'),
+                  "C": Schema.string(description: 'Option 3'),
+                  "D": Schema.string(description: 'Option 4'),
+                },
+                optionalProperties: [],
+              ),
+              'correctOption': Schema.string(description: 'LaTeX version of the correct option in Base64-encoded LaTeX source (UTF-8)'),
+            },
+            optionalProperties: ['options', 'matchingPairs', 'correctOption', 'scenarioText'],
           ),
-          'latexVersion': Schema.string(description: 'LaTeX version of the question in Base64-encoded LaTeX source (UTF-8)'),
+          'latexPackages': Schema.string(
+            description:
+                'A single string containing all necessary LaTeX preamble declarations required to successfully render every LaTeX snippet generated in the "latexVersion" array. Include packages for math symbols, chemical equations, tables, or special formatting used in the questions and answers.',
+          ),
+          'latexEngine': Schema(
+            SchemaType.string,
+            description: 'The LaTeX engine to use for rendering the LaTeX content.',
+            enumValues: ['pdflatex', 'lualatex'],
+          ),
         },
-        optionalProperties: ['options', 'matchingPairs', 'orGroupId', 'scenarioText', 'subQuestions'],
+        optionalProperties: ['options', 'matchingPairs', 'orGroupId', 'scenarioText', 'subQuestions', 'correctOption'],
       ),
     );
     // Gemini call
     final response = await model.generateContent([
       Content.multi([prompt, docPart]),
     ], generationConfig: GenerationConfig(responseMimeType: 'application/json', responseSchema: responseSchema));
-    // Parse and distribute results back to appropriate sections
-    // if (kDebugMode) {
-    //   debugPrint("response: ${response.text}");
-    //   debugPrint("tasks: $tasks");
-    //   debugPrint("batch: $batch");
-    // }
     return await _parseStandardBatchResponse(response.text ?? "", tasks, batch, examId);
   }
 
@@ -1158,7 +1253,7 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
 ''';
   }
 
-  // Parse scenario batch response
+  /*// Parse scenario batch response
   Future<List<Question>> _parseScenarioBatchResponse(String response, List<ScenarioGenerationRequest> requests, int batch, String examId) async {
     final List<Question> generatedQuestions = [];
 
@@ -1243,34 +1338,19 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
     }
 
     return generatedQuestions;
-  }
+  }*/
 
   // Parse standard questions batch response
   Future<List<Question>> _parseStandardBatchResponse(String response, List<QuestionTypeTask> tasks, int batch, String examId) async {
-    List<Question> generatedQuestions = [];
+    final List<Question> generatedQuestions = [];
 
     try {
       final rawBatch = _cleanAndParseJson(response);
 
-      // if (rawBatch is! List) {
-      //   debugPrint('Expected array response for standard batch');
-      //   return generatedQuestions;
-      // }
+      for (final qData in rawBatch) {
+        final sectionIndex = qData['sectionIndex'];
 
-      // if (kDebugMode) {
-      //   debugPrint("raw batch: $rawBatch");
-      // }
-
-      for (var qData in rawBatch) {
-        // if (kDebugMode) {
-        //   debugPrint("qData: $qData");
-        // }
-        final sectionIndex = qData['sectionIndex'] as int?;
-
-        if (sectionIndex == null || sectionIndex >= tasks.length) {
-          debugPrint('Invalid sectionIndex in standard batch: $sectionIndex');
-          continue;
-        }
+        if (sectionIndex == null || sectionIndex >= tasks.length) continue;
 
         final task = tasks[sectionIndex];
         final section = task.section;
@@ -1278,32 +1358,52 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
 
         final question = Question(
           id: 'q_${DateTime.now().millisecondsSinceEpoch}_${batch}_${generatedQuestions.length}',
+          examId: examId,
           sectionId: section.id,
           sectionName: section.name,
-          text: qData['text'] as String? ?? '',
-          concept: qData['concept'] as String? ?? '',
-          difficulty: qData['difficulty'] as String? ?? 'Medium',
-          type: qData['type'] as String? ?? qt.type,
-          marks: qt.marks,
-          modelAnswer: qData['modelAnswer'] as String? ?? '',
+
+          text: qData['question'] ?? '',
+          concept: qData['concept'] ?? '',
+          difficulty: qData['difficulty'] ?? 'Medium',
+          type: qData['type'] ?? qt.type,
+          marks: qData['marks'] ?? qt.marks,
+
+          modelAnswer: qData['modelAnswer'] ?? '',
           rubric: (qData['rubric'] as List?)?.map((e) => e.toString()).toList() ?? [],
-          options: (qData['options'] as List?)?.map((e) => e.toString()).toList(),
-          matchingPairs: (qData['matchingPairs'] as List?)?.map((pair) {
-            return MatchingPair(left: pair['left'] as String? ?? '', right: pair['right'] as String? ?? '');
-          }).toList(),
-          negativeValue: qt.negativeMarks ? qt.negativeValue : 0,
-          allowPartial: qt.partialScoring,
-          isOrType: qData['isOrType'] as bool? ?? false,
-          orGroupId: qData['orGroupId'] as String? ?? '',
-          bloomsLevel: qData['bloomsLevel'] as String? ?? qt.bloomsLevel,
-          examId: _currentExamId,
-          latexVersion: qData['latexVersion'] as String? ?? '',
+
+          correctOption: qData['correctOption'],
+
+          options: qData['options'] != null ? Map<String, String>.from(qData['options']) : null,
+
+          matchingPairs: (qData['matchingPairs'] as List?)?.map((e) => MatchingPair(left: e['left'] ?? '', right: e['right'] ?? '')).toList(),
+
+          negativeValue: (qData['negativeValue'] ?? 0).toDouble(),
+          allowPartial: qData['allowPartial'] ?? qt.partialScoring,
+
+          isOrType: qData['isOrType'] ?? false,
+          orGroupId: qData['orGroupId'],
+
+          bloomsLevel: qData['bloomsLevel'] ?? qt.bloomsLevel,
+
+          isScenario: qData['isScenario'] ?? false,
+          scenarioId: qData['scenarioID'],
+          scenarioText: qData['scenarioText'],
+
+          subQuestions: (qData['subQuestions'] as List?)?.map((sq) => _parseSubQuestion(sq)).toList(),
+
+          latexVersion: LatexBlock.fromJson(Map<String, dynamic>.from(qData['latexVersion'])),
+
+          latexPackages: qData['latexPackages'] ?? '',
+          latexEngine: qData['latexEngine'] ?? 'pdflatex',
         );
+
+        await _saveQuestionToDb(question);
 
         generatedQuestions.add(question);
       }
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('Error parsing standard batch response: $e');
+      debugPrint('$st');
     }
 
     return generatedQuestions;
@@ -1328,6 +1428,26 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
       debugPrintStack(stackTrace: stack);
       return null;
     }
+  }
+
+  SubQuestion _parseSubQuestion(Map<String, dynamic> sq) {
+    return SubQuestion(
+      text: sq['question'] ?? '',
+      concept: sq['concept'] ?? '',
+      difficulty: sq['difficulty'] ?? 'Medium',
+      type: sq['type'] ?? '',
+      marks: sq['marks'] ?? 0,
+      modelAnswer: sq['modelAnswer'] ?? '',
+      rubric: (sq['rubric'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      options: (sq['options'])?.map((e) => Map<String, String>.from(e)),
+      matchingPairs: (sq['matchingPairs'] as List?)?.map((e) => MatchingPair(left: e['left'], right: e['right'])).toList(),
+      negativeValue: (sq['negativeValue'] ?? 0).toDouble(),
+      allowPartial: sq['allowPartial'] ?? false,
+      bloomsLevel: sq['bloomsLevel'],
+      latexVersion: (sq['latexVersion']).map((e) => LatexBlock.fromJson(e)),
+      latexPackages: sq['latexPackages'] ?? '',
+      latexEngine: sq['latexEngine'] ?? 'pdflatex',
+    );
   }
 
   // Helper method to clean and parse JSON (matches your JS implementation)

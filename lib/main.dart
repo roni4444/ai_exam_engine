@@ -3,17 +3,16 @@ import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
 import 'package:ai_exam_engine/providers/gemini_provider.dart';
 import 'package:ai_exam_engine/providers/question_provider.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
-import 'config/onesignal_config.dart';
-import 'config/supabase_config.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/exam_provider.dart';
@@ -22,34 +21,29 @@ import 'providers/theme_provider.dart';
 import 'providers/supabase_provider.dart';
 import 'screens/splash_screen.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // Load environment variables
-    await dotenv.load(fileName: "assets/.env");
-
-    // Initialize Firebase
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    await FirebaseAppCheck.instance.activate(
-      // You can also use a `ReCaptchaEnterpriseProvider` provider instance as an
-      // argument for `webProvider`
-      providerWeb: ReCaptchaV3Provider(dotenv.env['RECAPTCHA_SITE_KEY_V3'] ?? ''),
+    final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+    await analytics.logAppOpen();
+    final remoteConfig = FirebaseRemoteConfig.instance;
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(fetchTimeout: const Duration(minutes: 1), minimumFetchInterval: const Duration(minutes: 1)),
     );
-    // Initialize Supabase
-    await Supabase.initialize(url: SupabaseConfig.url, anonKey: SupabaseConfig.anonKey);
-
-    if (!kIsWeb) {
-      // Enable verbose logging for debugging (remove in production)
-      OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-      // Initialize with your OneSignal App ID
-      OneSignal.initialize(OneSignalConfig.appId);
-      // Use this method to prompt for push notifications.
-      // We recommend removing this method after testing and instead use In-App Messages to prompt for notification permission.
-      OneSignal.Notifications.requestPermission(false);
+    await remoteConfig.fetchAndActivate();
+    final url = remoteConfig.getString("SUPABASE_URL");
+    final key = remoteConfig.getString("SUPABASE_ANON_KEY");
+    if (url.isEmpty || key.isEmpty) {
+      throw Exception("Supabase credentials are empty! Check Firebase Console.");
     }
+    await Supabase.initialize(url: url, anonKey: key, debug: kDebugMode);
+    /*await FirebaseAppCheck.instance.activate(
+      providerWeb: ReCaptchaV3Provider("6Lc9w00sAAAAAMH511AZ5XnxjUN-1Nm1xahEQCMN"),
+    );*/
     runApp(const MyApp());
-  } catch (e) {
+  } catch (e, s) {
     // Show error screen if initialization fails
     runApp(
       MaterialApp(
@@ -67,8 +61,10 @@ void main() async {
                   const SizedBox(height: 16),
                   Text('Failed to initialize app: $e', textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
                   const SizedBox(height: 24),
+                  Text('Tack: ${s.toString()}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(height: 24),
                   const Text(
-                    'Please check your .env file and configuration',
+                    'Please check your configuration data',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),

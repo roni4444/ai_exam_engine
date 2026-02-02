@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart';
@@ -20,7 +21,12 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
+                  SizedBox(
+                    width: 120,
+                    height: 120,
+                    child: SvgPicture.asset("assets/logo/AI_Exam_Engine_Logo.svg", semanticsLabel: 'AI Exam Engine Logo'),
+                  ),
+                  /*Container(
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
@@ -29,7 +35,7 @@ class HomeScreen extends StatelessWidget {
                       boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withValues(alpha: 255 * 0.3), blurRadius: 30, spreadRadius: 5)],
                     ),
                     child: const Icon(Icons.psychology, size: 60, color: Colors.white),
-                  ),
+                  ),*/
                   const SizedBox(height: 32),
                   const Text('AI Exam Engine', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),

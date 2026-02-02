@@ -1,4 +1,3 @@
-import 'package:ai_exam_engine/services/gemini_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -22,7 +21,6 @@ class LibraryFileCard extends StatefulWidget {
 }
 
 class _LibraryFileCardState extends State<LibraryFileCard> {
-  final GeminiService geminiService = GeminiService();
   late ProcessingStatus fileProcessingStatus = ProcessingStatus.idle;
 
   @override

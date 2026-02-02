@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/exam_models.dart';
+import '../providers/supabase_provider.dart';
 import '../widgets/question_card_widget.dart';
 import '../widgets/stat_card_widget.dart';
 import 'simulation_screen.dart';
@@ -17,68 +20,27 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
   String _selectedLanguage = 'English';
   bool _isDownloading = false;
 
-  // Mock questions for demo
-  /*final List<Question> _mockQuestions = [
-    Question(
-      id: 'q1',
-      sectionId: 's1',
-      sectionName: 'Section A',
-      text: 'What is the capital of France?',
-      concept: 'Geography',
-      difficulty: 'Easy',
-      type: 'Multiple Choice',
-      marks: 1,
-      modelAnswer: 'Paris',
-      rubric: ['Correct city name'],
-      options: ['London', 'Paris', 'Berlin', 'Madrid'],
-      negativeValue: 0.25,
-      allowPartial: false,
-      isOrType: false,
-      bloomsLevel: 'Remember',
-      examId: '',
-      latexVersion: '',
-    ),
-    Question(
-      id: 'q2',
-      sectionId: 's1',
-      sectionName: 'Section A',
-      text: 'Explain the water cycle in detail.',
-      concept: 'Science',
-      difficulty: 'Medium',
-      type: 'Short Answer',
-      marks: 4,
-      modelAnswer: 'The water cycle involves evaporation, condensation, precipitation, and collection.',
-      rubric: ['Mention evaporation', 'Mention condensation', 'Mention precipitation', 'Mention collection'],
-      negativeValue: 0,
-      allowPartial: true,
-      isOrType: false,
-      bloomsLevel: 'Understand',
-      examId: '',
-      latexVersion: '',
-    ),
-    Question(
-      id: 'q3',
-      sectionId: 's2',
-      sectionName: 'Section B',
-      text: 'Derive the quadratic formula from ax² + bx + c = 0.',
-      concept: 'Mathematics',
-      difficulty: 'Hard',
-      type: 'Equation Derivation',
-      marks: 10,
-      modelAnswer: 'Complete derivation using completing the square method.',
-      rubric: ['Start with standard form', 'Complete the square', 'Simplify', 'Final formula'],
-      negativeValue: 0,
-      allowPartial: true,
-      isOrType: false,
-      bloomsLevel: 'Apply',
-      examId: '',
-      latexVersion: '',
-    ),
-  ];*/
+  Future<void> buildExamLatex(String examId) async {
+    final supabase = context.read<SupabaseProvider>();
+    final response = await supabase.client.functions.invoke('build_exam_latex', body: {'exam_id': examId});
 
-  Future<void> _downloadQuestions() async {
+    if (response.status != 200) {
+      throw Exception(response.data ?? 'Failed to build exam LaTeX');
+    }
+
+    if (kDebugMode) {
+      print('Edge function response: ${response.data}');
+    }
+  }
+
+  Future<void> preparePDF() async {
     setState(() => _isDownloading = true);
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      await buildExamLatex(widget.questions.first.examId);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF task created')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
     setState(() => _isDownloading = false);
 
     if (!mounted) return;
@@ -143,20 +105,20 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
                 ),
                 const Spacer(),
                 ElevatedButton.icon(
-                  onPressed: _isDownloading ? null : _downloadQuestions,
+                  onPressed: _isDownloading ? null : preparePDF,
                   icon: _isDownloading
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.download, color: Colors.white),
-                  label: const Text('Download Questions', style: TextStyle(color: Colors.white)),
+                  label: const Text('Prepare Questions', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  onPressed: _isDownloading ? null : _downloadQuestions,
+                  onPressed: _isDownloading ? null : preparePDF,
                   icon: _isDownloading
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.book, color: Colors.white),
-                  label: const Text('Download Solutions', style: TextStyle(color: Colors.white)),
+                  label: const Text('Download Question', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
                 ),
               ],

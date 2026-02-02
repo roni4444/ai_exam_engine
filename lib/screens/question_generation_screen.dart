@@ -1,4 +1,5 @@
 import 'package:ai_exam_engine/models/exam_config.dart';
+import 'package:ai_exam_engine/providers/supabase_provider.dart';
 import 'package:ai_exam_engine/screens/review_questions_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -123,6 +124,8 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
   }
 
   Widget _buildGenerationProgress(QuestionGenerationProgress progress) {
+    final supabase = context.read<SupabaseProvider>();
+    final provider = context.read<QuestionProvider>();
     return Center(
       child: Container(
         padding: const EdgeInsets.all(32),
@@ -148,68 +151,77 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
             const SizedBox(height: 40),
 
             // Progress Card
-            Container(
-              constraints: const BoxConstraints(maxWidth: 600),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 255 * 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Questions Generated',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B), fontSize: 14),
+            StreamBuilder(
+              stream: supabase.client.from("questions").stream(primaryKey: ["id"]).eq("exam_id", provider.currentExamId ?? ""),
+              builder: (context, asyncSnapshot) {
+                return Container(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 255 * 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '${progress.current}',
-                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                          const Text(
+                            'Questions Generated',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B), fontSize: 14),
                           ),
-                          Text(' / ${progress.total}', style: TextStyle(fontSize: 16, color: Colors.grey.shade400)),
+                          Row(
+                            children: [
+                              Text(
+                                (asyncSnapshot.hasData && asyncSnapshot.data!.isNotEmpty && provider.currentExamId != null)
+                                    ? asyncSnapshot.data!.length.toString()
+                                    : '0',
+                                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                              ),
+                              Text(' / ${progress.total}', style: TextStyle(fontSize: 16, color: Colors.grey.shade400)),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Progress Bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: (asyncSnapshot.hasData && asyncSnapshot.data!.isNotEmpty && provider.currentExamId != null)
+                              ? asyncSnapshot.data!.length / progress.total
+                              : 0,
+                          minHeight: 12,
+                          backgroundColor: Colors.grey.shade100,
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Percentage and Details
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Processing ${progress.status}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                          Text(
+                            '${((asyncSnapshot.hasData && asyncSnapshot.data!.isNotEmpty && provider.currentExamId != null) ? asyncSnapshot.data!.length / progress.total * 100 : 0).toStringAsFixed(0)}%',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                          ),
                         ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Progress Bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: progress.progress,
-                      minHeight: 12,
-                      backgroundColor: Colors.grey.shade100,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Percentage and Details
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Processing ${progress.status}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                      Text(
-                        '${(progress.progress * 100).toStringAsFixed(0)}%',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ],
         ),
@@ -474,7 +486,7 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
   }
 
   Future<void> _startGeneration() async {
-    await context.read<QuestionProvider>().generateQuestions(widget.examId);
+    if (widget.examId != null) await context.read<QuestionProvider>().generateQuestions(widget.examId ?? "");
   }
 
   int _calculateTotalQuestions() {

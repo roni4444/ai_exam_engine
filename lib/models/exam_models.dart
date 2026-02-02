@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class UserProfile {
   final String id;
   final String fullName;
@@ -78,27 +80,41 @@ class Question {
   final String examId;
   final String sectionId;
   final String sectionName;
+
   final String text;
   final String concept;
   final String difficulty;
   final String type;
   final int marks;
+
   final String modelAnswer;
   final List<String> rubric;
-  final List<String>? options;
+
+  final Map<String, String>? options;
   final List<MatchingPair>? matchingPairs;
+  final String? correctOption;
+
   final double negativeValue;
   final bool allowPartial;
+
   final bool isOrType;
   final String? orGroupId;
+
   final String? bloomsLevel;
+
   final bool isScenario;
+  final String? scenarioId;
   final String? scenarioText;
+
   final List<SubQuestion>? subQuestions;
-  final String latexVersion;
+
+  final LatexBlock latexVersion;
+  final String latexPackages;
+  final String latexEngine;
 
   Question({
     required this.id,
+    required this.examId,
     required this.sectionId,
     required this.sectionName,
     required this.text,
@@ -110,16 +126,19 @@ class Question {
     required this.rubric,
     this.options,
     this.matchingPairs,
+    this.correctOption,
     required this.negativeValue,
     required this.allowPartial,
     required this.isOrType,
     this.orGroupId,
     this.bloomsLevel,
-    this.isScenario = false,
+    required this.isScenario,
+    this.scenarioId,
     this.scenarioText,
     this.subQuestions,
-    required this.examId,
     required this.latexVersion,
+    required this.latexPackages,
+    required this.latexEngine,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -135,7 +154,7 @@ class Question {
       marks: json['marks'],
       modelAnswer: json['modelAnswer'] ?? '',
       rubric: List<String>.from(json['rubric'] ?? []),
-      options: json['options'] != null ? List<String>.from(json['options']) : null,
+      options: json['options'] != null ? Map<String, String>.from(json['options']) : null,
       matchingPairs: json['matchingPairs'] != null ? (json['matchingPairs'] as List).map((m) => MatchingPair.fromJson(m)).toList() : null,
       negativeValue: (json['negativeValue'] ?? 0.0).toDouble(),
       allowPartial: json['allowPartial'] ?? false,
@@ -145,7 +164,9 @@ class Question {
       isScenario: json['isScenario'] ?? false,
       scenarioText: json['scenarioText'],
       subQuestions: json['subQuestions'] != null ? (json['subQuestions'] as List).map((q) => SubQuestion.fromJson(q)).toList() : null,
-      latexVersion: json['latexVersion'],
+      latexVersion: LatexBlock.fromJson(json['latex_version']),
+      latexPackages: json['latexPackages'],
+      latexEngine: json['latexEngine'],
     );
   }
 
@@ -189,7 +210,7 @@ class Question {
       marks: json['marks'],
       modelAnswer: json['model_answer'] ?? '',
       rubric: List<String>.from(json['rubric'] ?? []),
-      options: json['options'] != null ? List<String>.from(json['options']) : null,
+      options: json['options'] != null ? Map<String, String>.from(json['options']) : null,
       matchingPairs: json['matching_pairs'] != null ? (json['matching_pairs'] as List).map((m) => MatchingPair.fromJson(m)).toList() : null,
       negativeValue: (json['negative_value'] ?? 0.0).toDouble(),
       allowPartial: json['allow_partial'] ?? false,
@@ -199,34 +220,56 @@ class Question {
       isScenario: json['is_scenario'] ?? false,
       scenarioText: json['scenario_text'],
       subQuestions: json['sub_questions'] != null ? (json['sub_questions'] as List).map((q) => SubQuestion.fromJson(q)).toList() : null,
-      latexVersion: json['latex_version'],
+      latexVersion: LatexBlock.fromJson(json['latex_version']),
+      latexPackages: json['latexPackages'],
+      latexEngine: json['latexEngine'],
     );
   }
 
-  Map<String, dynamic> toDBJson(String examId) {
+  Map<String, dynamic> toDBJson({required String examId}) {
     return {
-      // 'id': id,
+      // identity
       'exam_id': examId,
+
+      // section
       'section_id': sectionId,
       'section_name': sectionName,
+
+      // core question
       'question': text,
       'concept': concept,
       'difficulty': difficulty,
       'type': type,
       'marks': marks,
+
+      // evaluation
       'model_answer': modelAnswer,
-      'rubric': rubric,
-      'options': options,
+      'rubric': rubric, // TEXT[]
+      // MCQ / Matching
+      'options': options, // Map<String,String> → JSONB
+      'correct_option': correctOption,
       'matching_pairs': matchingPairs?.map((m) => m.toJson()).toList(),
+
+      // marking rules
       'negative_value': negativeValue,
       'allow_partial': allowPartial,
+
+      // OR logic
       'is_or_type': isOrType,
       'or_group_id': orGroupId,
+
+      // taxonomy
       'blooms_level': bloomsLevel,
+
+      // scenario
       'is_scenario': isScenario,
-      'scenario_text': scenarioText,
-      'sub_questions': subQuestions?.map((q) => q.toJson()).toList(),
-      'latex_version': latexVersion,
+      'scenario_id': isScenario ? scenarioId : null,
+      'scenario_text': isScenario ? scenarioText : null,
+
+      // LaTeX (single block)
+      'latex_version': latexVersion.toJson(),
+      'latex_packages': latexPackages,
+      'latex_engine': latexEngine,
     };
   }
 }
@@ -239,14 +282,15 @@ class SubQuestion {
   final int marks;
   final String modelAnswer;
   final List<String> rubric;
-  final List<String>? options;
+  final Map<String, String>? options;
+  final String? correctOption;
   final List<MatchingPair>? matchingPairs;
   final double negativeValue;
   final bool allowPartial;
-  final bool isOrType;
-  final String? orGroupId;
   final String? bloomsLevel;
-  final String latexVersion;
+  final LatexBlock latexVersion;
+  final String latexPackages;
+  final String latexEngine;
 
   SubQuestion({
     required this.text,
@@ -260,10 +304,11 @@ class SubQuestion {
     this.matchingPairs,
     required this.negativeValue,
     required this.allowPartial,
-    required this.isOrType,
-    this.orGroupId,
     this.bloomsLevel,
     required this.latexVersion,
+    required this.latexPackages,
+    required this.latexEngine,
+    this.correctOption,
   });
 
   factory SubQuestion.fromJson(Map<String, dynamic> json) {
@@ -275,34 +320,70 @@ class SubQuestion {
       marks: json['marks'],
       modelAnswer: json['modelAnswer'],
       rubric: List<String>.from(json['rubric']),
-      options: json['options'] != null ? List<String>.from(json['options']) : null,
+      options: json['options'] != null ? Map<String, String>.from(json['options']) : null,
       matchingPairs: json['matchingPairs'] != null ? (json['matchingPairs'] as List).map((m) => MatchingPair.fromJson(m)).toList() : null,
       negativeValue: (json['negativeValue'] ?? 0).toDouble(),
       allowPartial: json['allowPartial'] ?? false,
-      isOrType: json['isOrType'] ?? false,
-      orGroupId: json['orGroupId'],
       bloomsLevel: json['bloomsLevel'],
       latexVersion: json['latexVersion'],
+      latexPackages: json['latexPackages'],
+      latexEngine: json['latexEngine'],
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'text': text,
-    'concept': concept,
-    'difficulty': difficulty,
-    'type': type,
-    'marks': marks,
-    'modelAnswer': modelAnswer,
-    'rubric': rubric,
-    'options': options,
-    'matchingPairs': matchingPairs?.map((m) => m.toJson()).toList(),
-    'negativeValue': negativeValue,
-    'allowPartial': allowPartial,
-    'isOrType': isOrType,
-    'orGroupId': orGroupId,
-    'bloomsLevel': bloomsLevel,
-    'latexVersion': latexVersion,
-  };
+  Map<String, dynamic> toDBJson({required String parentQuestionId}) {
+    return {
+      'question_id': parentQuestionId,
+
+      'question': text,
+      'concept': concept,
+      'difficulty': difficulty,
+      'type': type,
+      'marks': marks,
+
+      'model_answer': modelAnswer,
+      'rubric': rubric,
+
+      'options': options,
+      'correct_option': correctOption,
+      'matching_pairs': matchingPairs?.map((m) => m.toJson()).toList(),
+
+      'negative_value': negativeValue,
+      'allow_partial': allowPartial,
+
+      'blooms_level': bloomsLevel,
+
+      'latex_version': latexVersion.toJson(),
+      'latex_packages': latexPackages,
+      'latex_engine': latexEngine,
+    };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'question': text,
+      'concept': concept,
+      'difficulty': difficulty,
+      'type': type,
+      'marks': marks,
+
+      'model_answer': modelAnswer,
+      'rubric': rubric,
+
+      'options': options,
+      'correct_option': correctOption,
+      'matching_pairs': matchingPairs?.map((m) => m.toJson()).toList(),
+
+      'negative_value': negativeValue,
+      'allow_partial': allowPartial,
+
+      'blooms_level': bloomsLevel,
+
+      'latex_version': latexVersion.toJson(),
+      'latex_packages': latexPackages,
+      'latex_engine': latexEngine,
+    };
+  }
 }
 
 class QuestionGenerationProgress {
@@ -415,5 +496,62 @@ class LibraryFile {
       isGeminiProcessed: json['isGeminiProcessed'] ?? false,
       id: json['id'],
     );
+  }
+}
+
+class LatexOptionBlock {
+  final String A;
+  final String B;
+  final String C;
+  final String D;
+
+  LatexOptionBlock({required this.A, required this.B, required this.C, required this.D});
+
+  factory LatexOptionBlock.fromJson(Map<String, dynamic> json) {
+    return LatexOptionBlock(A: json['A'] ?? '', B: json['B'] ?? '', C: json['C'] ?? '', D: json['D'] ?? '');
+  }
+}
+
+class LatexBlock {
+  final String question;
+  final String answer;
+  final String rubric;
+  final List<MatchingPair>? matchingPairs;
+  final Map<String, String>? options;
+  final String? correctOption;
+  final String? scenarioText;
+
+  LatexBlock({
+    required this.question,
+    required this.answer,
+    required this.rubric,
+    this.matchingPairs,
+    this.options,
+    this.correctOption,
+    this.scenarioText,
+  });
+
+  factory LatexBlock.fromJson(Map<String, dynamic> json) {
+    return LatexBlock(
+      question: json['question'] ?? '',
+      answer: json['answer'] ?? '',
+      rubric: json['rubric'] ?? '',
+      correctOption: json['correctOption'],
+      scenarioText: json['scenarioText'],
+      matchingPairs: (json['matchingPairs'] as List?)?.map((e) => MatchingPair(left: e['left'] ?? '', right: e['right'] ?? '')).toList(),
+      options: json['options'] != null ? Map<String, String>.from(json['options']) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'question': question,
+      'answer': answer,
+      'rubric': rubric,
+      'correctOption': correctOption,
+      'scenarioText': scenarioText,
+      'matchingPairs': matchingPairs?.map((m) => {'left': m.left, 'right': m.right}).toList(),
+      'options': options,
+    };
   }
 }

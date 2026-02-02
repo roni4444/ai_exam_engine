@@ -1,6 +1,6 @@
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
-import '../config/onesignal_config.dart';
+// import '../config/onesignal_config.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -19,7 +19,7 @@ class NotificationService {
       // Initialize OneSignal
       OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
 
-      OneSignal.initialize(OneSignalConfig.appId);
+      OneSignal.initialize("OneSignalConfig.appId");
 
       // Request notification permissions (iOS)
       await OneSignal.Notifications.requestPermission(true);
