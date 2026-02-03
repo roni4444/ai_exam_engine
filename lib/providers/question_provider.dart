@@ -3,6 +3,7 @@ import 'package:ai_exam_engine/models/exam_blueprint_model.dart';
 import 'package:ai_exam_engine/models/exam_config.dart';
 import 'package:firebase_ai/firebase_ai.dart' hide Candidate;
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 
@@ -54,12 +55,12 @@ class QuestionProvider extends ChangeNotifier {
     await loadQuestions(examId);
 
     final totalQuestions = _calculateTotalQuestions();
-    _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'initializing');
+    _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Initializing');
     notifyListeners();
     final supabase = Supabase.instance.client;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
-    _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'downloading details');
+    _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Downloading Details');
     notifyListeners();
     final bytes = await supabase.storage.from('exam-assets').download('library/$userId/$_fileName');
 
@@ -72,11 +73,13 @@ class QuestionProvider extends ChangeNotifier {
       final allQuestions = <Question>[];
 
       final batchCount = (_currentCandidates.length);
-      print(batchCount);
+      if (kDebugMode) {
+        print(batchCount);
+      }
       int currentProgress = 0;
 
       // Update to generating status
-      _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'preparing batches');
+      _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Preparing Batches');
       notifyListeners();
       // await _updateProgressInDb(_progress!);
 
@@ -96,18 +99,29 @@ class QuestionProvider extends ChangeNotifier {
           if (!questionTypeGroups.containsKey(typeKey)) {
             questionTypeGroups[typeKey] = [];
           }
-
-          questionTypeGroups[typeKey]!.add(QuestionTypeTask(section: section, questionType: qt));
+          if (qt.bloomsDistribution.isNotEmpty) {
+            questionTypeGroups[typeKey]!.add(QuestionTypeTask(section: section, questionType: qt));
+          }
         }
       }
-
+      if (kDebugMode) {
+        print("type group $questionTypeGroups");
+      }
+      questionTypeGroups.removeWhere((key, value) => value.every((test) => test.questionType.bloomsDistribution.isEmpty));
+      if (kDebugMode) {
+        print("type group $questionTypeGroups");
+      }
       // Process each question type group in batch
       for (var entry in questionTypeGroups.entries) {
         final String typeName = entry.key;
         final List<QuestionTypeTask> tasks = entry.value;
-
+        if (kDebugMode) {
+          print("type name $typeName");
+        }
         try {
           if (typeName == 'Scenario Based') {
+            _progress = QuestionGenerationProgress(current: currentProgress, total: totalQuestions, status: 'Generating Questions of $typeName');
+            notifyListeners();
             // Batch process all scenario questions of this type
             final scenarioQuestions = await _generateScenarioBatch(
               examId: examId,
@@ -122,6 +136,8 @@ class QuestionProvider extends ChangeNotifier {
 
             await _saveQuestionsToDb(scenarioQuestions);
           } else {
+            _progress = QuestionGenerationProgress(current: currentProgress, total: totalQuestions, status: 'Generating Questions of $typeName');
+            notifyListeners();
             // Batch process all standard questions of this type
             final standardQuestions = await _generateStandardQuestionsBatch(
               examId: examId,
@@ -139,8 +155,7 @@ class QuestionProvider extends ChangeNotifier {
           }
 
           // Update progress after each question type batch
-          _progress = QuestionGenerationProgress(current: currentProgress, total: totalQuestions, status: 'generating $typeName');
-          notifyListeners();
+
           // await _updateProgressInDb(_progress!);
         } catch (e) {
           debugPrint('Failed to generate questions for type $typeName: $e');
@@ -626,7 +641,16 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
   /// Save a question to database
   Future<void> _saveQuestionToDb(Question question) async {
     try {
+      if (kDebugMode) {
+        print('orGroupId ${question.orGroupId}');
+        print('question.id ${question.id}');
+        print('question.id ${question.examId}');
+        print('question.id ${question.sectionId}');
+      }
+
+      await Future.delayed(Duration(seconds: 1));
       await _supabase.from('questions').insert(question.toDBJson(examId: _currentExamId ?? ""));
+      notifyListeners();
     } catch (e) {
       debugPrint('Failed to save question ${question.text} of ${question.id} to DB: $e');
       rethrow;
@@ -649,17 +673,25 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         _libraryId = findId['library_id'];
         _candidateGroupId = findId['candidate_group_id'];
         _examBlueprintId = findId['exam_blueprint_id'];
-        print("$examId : $_currentExamId $_libraryId $_candidateGroupId $_examBlueprintId");
+        if (kDebugMode) {
+          print("$examId : $_currentExamId $_libraryId $_candidateGroupId $_examBlueprintId");
+        }
       }
       try {
         final response1 = await _supabase.from('questions').select().eq('exam_id', _currentExamId ?? "");
         // print("response1 $response1");
-        (response1 as List).map((json) => print((json as Map<String, dynamic>).entries.where((test) => test.value == null).toList())).toList();
+        (response1 as List).map((json) {
+          if (kDebugMode) {
+            print((json as Map<String, dynamic>).entries.where((test) => test.value == null).toList());
+          }
+        }).toList();
         _questions = (response1 as List).map((json) => Question.fromDBJson(json)).toList();
         notifyListeners();
       } catch (e) {
         _error = e.toString();
-        print("_questions error $e");
+        if (kDebugMode) {
+          print("_questions error $e");
+        }
 
         notifyListeners();
       }
@@ -672,7 +704,9 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       } catch (e) {
         _error = e.toString();
 
-        print("response2 error $e");
+        if (kDebugMode) {
+          print("response2 error $e");
+        }
 
         notifyListeners();
       }
@@ -681,7 +715,9 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         notifyListeners();
       } catch (e) {
         _error = e.toString();
-        print("_currentCandidates error $e");
+        if (kDebugMode) {
+          print("_currentCandidates error $e");
+        }
         notifyListeners();
       }
       try {
@@ -690,7 +726,9 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         notifyListeners();
       } catch (e) {
         _error = e.toString();
-        print("response4 error $e");
+        if (kDebugMode) {
+          print("response4 error $e");
+        }
         notifyListeners();
       }
     }
@@ -802,6 +840,10 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     }
 
     if (totalEasy + totalMedium + totalHard > 0) {
+      if (kDebugMode) {
+        print('Generating questions of type $typeName');
+        print('Total easy: $totalEasy, medium: $totalMedium, hard: $totalHard');
+      }
       // Generate all questions of this type in one batch
       final batchQuestions = await _generateQuestionTypeBatch(
         examId: examId,
@@ -835,7 +877,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     // Build prompt for all scenarios at once
     final prompt = TextPart(_buildScenarioBatchPrompt(requests, chapters));
     final model = FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       systemInstruction: Content.system('''
       You must output ONLY valid JSON.
         Rules:
@@ -1024,20 +1066,20 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     required Uint8List bytes,
   }) async {
     // Build prompt for all questions of this type
-    final prompt = TextPart(
-      _buildStandardBatchPrompt(
-        typeName: typeName,
-        totalEasy: totalEasy,
-        totalMedium: totalMedium,
-        totalHard: totalHard,
-        tasks: tasks,
-        syllabusContext: syllabusContext,
-        batch: batch,
-      ),
+    final String textPart = _buildStandardBatchPrompt(
+      typeName: typeName,
+      totalEasy: totalEasy,
+      totalMedium: totalMedium,
+      totalHard: totalHard,
+      tasks: tasks,
+      syllabusContext: syllabusContext,
+      batch: batch,
     );
-    final model = FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-3-flash-preview',
-      systemInstruction: Content.system('''
+    if (kDebugMode) {
+      print("Prompt $textPart");
+    }
+    final prompt = TextPart(textPart);
+    final String systemInstruction = '''
       You must output ONLY valid JSON.
         Rules:
         - Output must be a JSON array.
@@ -1048,7 +1090,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - "sectionName" (string)
         - "text" (string)
         - "concept" (string)
-        - "difficulty" (string)
+        - "difficulty" (string) Easy|Medium|Hard
         - "type" (string)
         - "modelAnswer" (string)
         - "bloomsLevel" (string)
@@ -1072,8 +1114,11 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         Model Answer rules:
         - Each Model Answer should be the proper answer of the question justifying the rubric (if present) separately.
         
-      Follow the provided JSON schema exactly.'''),
-    );
+      Follow the provided JSON schema exactly.''';
+    if (kDebugMode) {
+      print("System Instruction $systemInstruction");
+    }
+    final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-2.5-flash', systemInstruction: Content.system(systemInstruction));
     // Create InlineDataPart
     final docPart = InlineDataPart('application/pdf', bytes);
     // final response = await _callGemini(prompt);
@@ -1130,11 +1175,11 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
               ),
               'correctOption': Schema.string(description: 'LaTeX version of the correct option in Base64-encoded LaTeX source (UTF-8)'),
             },
-            optionalProperties: ['options', 'matchingPairs', 'correctOption', 'scenarioText'],
+            optionalProperties: ['options', 'matchingPairs', 'correctOption'],
           ),
           'latexPackages': Schema.string(
             description:
-                'A single string containing all necessary LaTeX preamble declarations required to successfully render every LaTeX snippet generated in the "latexVersion" array. Include packages for math symbols, chemical equations, tables, or special formatting used in the questions and answers.',
+                'A single string of comma separated names of all necessary LaTeX preamble declarations required to successfully render every LaTeX snippet generated in the "latexVersion" array. Include packages for math symbols, chemical equations, tables, or special formatting used in the questions and answers.',
           ),
           'latexEngine': Schema(
             SchemaType.string,
@@ -1142,14 +1187,35 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
             enumValues: ['pdflatex', 'lualatex'],
           ),
         },
-        optionalProperties: ['options', 'matchingPairs', 'orGroupId', 'scenarioText', 'subQuestions', 'correctOption'],
+        optionalProperties: ['options', 'matchingPairs', 'orGroupId', 'correctOption'],
       ),
     );
+    if (kDebugMode) {
+      print("Response Schema ${responseSchema.toJson()}");
+    }
+    bool call = true;
     // Gemini call
-    final response = await model.generateContent([
-      Content.multi([prompt, docPart]),
-    ], generationConfig: GenerationConfig(responseMimeType: 'application/json', responseSchema: responseSchema));
-    return await _parseStandardBatchResponse(response.text ?? "", tasks, batch, examId);
+    do {
+      try {
+        /*_progress = QuestionGenerationProgress(current: 0, total: (totalEasy + totalMedium + totalHard) * 3, status: 'Preparing Batches');
+        notifyListeners();*/
+        final response = await model.generateContent([
+          Content.multi([prompt, docPart]),
+        ], generationConfig: GenerationConfig(responseMimeType: 'application/json', responseSchema: responseSchema));
+        return await _parseStandardBatchResponse(response.text ?? "", tasks, batch, examId, totalEasy + totalMedium + totalHard);
+      } on ClientException catch (e) {
+        if (kDebugMode) {
+          print("ClientException $e");
+        }
+        await Future.delayed(Duration(minutes: 1));
+      } catch (e) {
+        call = false;
+        if (kDebugMode) {
+          print("Error $e");
+        }
+      }
+    } while (call);
+    return [];
   }
 
   // Build prompt for batch scenario generation
@@ -1208,7 +1274,7 @@ IMPORTANT:
   }) {
     // Collect Bloom's distribution if specified
     final bloomsInstructions = <String>[];
-
+    final marks = tasks.elementAt(0).questionType.marks;
     for (var task in tasks) {
       if (task.questionType.bloomsDistribution.isNotEmpty) {
         final distString = task.questionType.bloomsDistribution.map((d) => '${d.count} questions at "${d.level}" level').join(', ');
@@ -1244,9 +1310,10 @@ $syllabusContext
 
 GENERATION REQUIREMENTS:
 1. Question Type: "$typeName"
-2. Total Quantity: Easy ($totalEasy), Medium ($totalMedium), Hard ($totalHard)
+2. Total Quantity: Easy (${totalEasy * batch}), Medium (${totalMedium * batch}), Hard (${totalHard * batch})
 3. Section Distribution: ${jsonEncode(sectionMapping)}
 4. $bloomsInstruction
+5. Questions should be equivalent to $marks marks each.
 
 Generate exactly ${(totalEasy + totalMedium + totalHard) * batch} questions total.
 Ensure syllabus coverage is wide and concepts are distributed evenly.
@@ -1341,12 +1408,14 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
   }*/
 
   // Parse standard questions batch response
-  Future<List<Question>> _parseStandardBatchResponse(String response, List<QuestionTypeTask> tasks, int batch, String examId) async {
+  Future<List<Question>> _parseStandardBatchResponse(String response, List<QuestionTypeTask> tasks, int batch, String examId, int total) async {
     final List<Question> generatedQuestions = [];
-
+    /*_progress = QuestionGenerationProgress(current: 0, total: total, status: 'Understanding Gemini Response');
+    notifyListeners();*/
     try {
       final rawBatch = _cleanAndParseJson(response);
-
+      /*_progress = QuestionGenerationProgress(current: 0, total: total, status: 'Adding questions...');
+      notifyListeners();*/
       for (final qData in rawBatch) {
         final sectionIndex = qData['sectionIndex'];
 

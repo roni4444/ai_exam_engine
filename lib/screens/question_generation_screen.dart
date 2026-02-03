@@ -18,8 +18,9 @@ class QuestionGenerationScreen extends StatefulWidget {
   State<QuestionGenerationScreen> createState() => _QuestionGenerationScreenState();
 }
 
-class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
+class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> with TickerProviderStateMixin {
   late Question question;
+  late AnimationController _controller;
 
   @override
   void initState() {
@@ -211,7 +212,7 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Processing ${progress.status}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                          Text(progress.status, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                           Text(
                             '${((asyncSnapshot.hasData && asyncSnapshot.data!.isNotEmpty && provider.currentExamId != null) ? asyncSnapshot.data!.length / progress.total * 100 : 0).toStringAsFixed(0)}%',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600),

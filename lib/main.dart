@@ -45,7 +45,9 @@ Future<void> main() async {
       debug: kDebugMode,
     );
     final firebaseAppCheck = FirebaseAppCheck.instance;
-    await firebaseAppCheck.activate(providerWeb: ReCaptchaV3Provider("6Lc9w00sAAAAAMH511AZ5XnxjUN-1Nm1xahEQCMN"));
+    if (kDebugMode) {
+      await firebaseAppCheck.activate(providerWeb: ReCaptchaV3Provider("6Lc9w00sAAAAAMH511AZ5XnxjUN-1Nm1xahEQCMN"));
+    }
     runApp(const MyApp());
   } catch (e, s) {
     // Show error screen if initialization fails
