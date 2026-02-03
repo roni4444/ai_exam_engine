@@ -26,22 +26,26 @@ Future<void> main() async {
 
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-    await analytics.logAppOpen();
-    final remoteConfig = FirebaseRemoteConfig.instance;
-    await remoteConfig.setConfigSettings(
-      RemoteConfigSettings(fetchTimeout: const Duration(minutes: 1), minimumFetchInterval: const Duration(minutes: 1)),
+    // final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+    // await analytics.logAppOpen();
+    // final remoteConfig = FirebaseRemoteConfig.instance;
+    // await remoteConfig.setConfigSettings(
+    //   RemoteConfigSettings(fetchTimeout: const Duration(minutes: 1), minimumFetchInterval: const Duration(minutes: 1)),
+    // );
+    // await remoteConfig.fetchAndActivate();
+    // final url = remoteConfig.getString("SUPABASE_URL");
+    // final key = remoteConfig.getString("SUPABASE_ANON_KEY");
+    // if (url.isEmpty || key.isEmpty) {
+    //   throw Exception("Supabase credentials are empty! Check Firebase Console.");
+    // }
+    await Supabase.initialize(
+      url: "https://hrxpntqefhfatgoagrsu.supabase.co",
+      anonKey:
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyeHBudHFlZmhmYXRnb2FncnN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDgyMTAsImV4cCI6MjA4MjU4NDIxMH0.ejIyIACpojXC3EGXpx59cyLY0ClJqL7LHCS_80rErA0",
+      debug: kDebugMode,
     );
-    await remoteConfig.fetchAndActivate();
-    final url = remoteConfig.getString("SUPABASE_URL");
-    final key = remoteConfig.getString("SUPABASE_ANON_KEY");
-    if (url.isEmpty || key.isEmpty) {
-      throw Exception("Supabase credentials are empty! Check Firebase Console.");
-    }
-    await Supabase.initialize(url: url, anonKey: key, debug: kDebugMode);
-    /*await FirebaseAppCheck.instance.activate(
-      providerWeb: ReCaptchaV3Provider("6Lc9w00sAAAAAMH511AZ5XnxjUN-1Nm1xahEQCMN"),
-    );*/
+    final firebaseAppCheck = FirebaseAppCheck.instance;
+    await firebaseAppCheck.activate(providerWeb: ReCaptchaV3Provider("6Lc9w00sAAAAAMH511AZ5XnxjUN-1Nm1xahEQCMN"));
     runApp(const MyApp());
   } catch (e, s) {
     // Show error screen if initialization fails
