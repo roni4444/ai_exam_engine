@@ -37,6 +37,7 @@ class _SetupScreenState extends State<SetupScreen> {
   // String sourceText = '';
 
   String _examName = '';
+  String _examLanguage = 'en';
   late String _examId;
   // int _studentCount = 3;
   // List<String> _studentNames = ['Student 1', 'Student 2', 'Student 3'];
@@ -117,7 +118,7 @@ class _SetupScreenState extends State<SetupScreen> {
               ],
             ),
           ),
-          _buildStatusIndicator(),
+          // _buildStatusIndicator(),
         ],
       ),
     );
@@ -502,6 +503,9 @@ class _SetupScreenState extends State<SetupScreen> {
               child: Column(
                 children: [
                   _buildExamNameField(),
+                  const SizedBox(height: 16),
+                  _buildExamLanguageDropDown(),
+                  const SizedBox(height: 16),
                   Expanded(child: _buildCandidateList()),
                 ],
               ),
@@ -524,7 +528,7 @@ class _SetupScreenState extends State<SetupScreen> {
           Icon(Icons.settings, color: Color(0xFF64748B), size: 18),
           SizedBox(width: 8),
           Text(
-            'Identity & Cohort',
+            'Identity, Medium & Cohort',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
           ),
         ],
@@ -571,14 +575,41 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
+  Widget _buildExamLanguageDropDown() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        const Text(
+          'Language',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 1.2),
+        ),
+        const SizedBox(width: 16),
+        DropdownButton(
+          value: _examLanguage,
+          items: [
+            DropdownMenuItem(value: 'en', child: Text('English')),
+            DropdownMenuItem(value: 'bn', child: Text('Bengali')),
+            DropdownMenuItem(value: 'hi', child: Text('Hindi')),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _examLanguage = value.toString();
+            });
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildStudentListSection() {
-    return Center(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton.icon(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 120.0),
+          child: ElevatedButton.icon(
             onPressed: _openGroupList,
             icon: const Icon(Icons.photo_library, size: 16),
             label: const Text('Select from Group List'),
@@ -589,8 +620,8 @@ class _SetupScreenState extends State<SetupScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

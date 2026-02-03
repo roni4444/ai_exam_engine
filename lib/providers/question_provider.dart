@@ -47,6 +47,7 @@ class QuestionProvider extends ChangeNotifier {
   List<String> get importantChapters => _importantChapters;
   List<Candidate> get currentCandidates => _currentCandidates;
   // String get fileName => _fileName;
+  int totalQuestions = 0;
 
   /// Start question generation directly in Flutter
   Future<void> generateQuestions(String examId) async {
@@ -54,7 +55,7 @@ class QuestionProvider extends ChangeNotifier {
     _error = null;
     await loadQuestions(examId);
 
-    final totalQuestions = _calculateTotalQuestions();
+    totalQuestions = _calculateTotalQuestions();
     _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Initializing');
     notifyListeners();
     final supabase = Supabase.instance.client;
@@ -1118,7 +1119,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     if (kDebugMode) {
       print("System Instruction $systemInstruction");
     }
-    final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-2.5-flash', systemInstruction: Content.system(systemInstruction));
+
     // Create InlineDataPart
     final docPart = InlineDataPart('application/pdf', bytes);
     // final response = await _callGemini(prompt);
@@ -1194,11 +1195,18 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       print("Response Schema ${responseSchema.toJson()}");
     }
     bool call = true;
+    int retry = 0;
+    int modelIndex = 0;
+    List<String> models = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
     // Gemini call
     do {
       try {
-        /*_progress = QuestionGenerationProgress(current: 0, total: (totalEasy + totalMedium + totalHard) * 3, status: 'Preparing Batches');
-        notifyListeners();*/
+        final model = FirebaseAI.googleAI().generativeModel(
+          model: models.elementAt(modelIndex),
+          systemInstruction: Content.system(systemInstruction),
+        );
+        _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Waiting for Gemini response...');
+        notifyListeners();
         final response = await model.generateContent([
           Content.multi([prompt, docPart]),
         ], generationConfig: GenerationConfig(responseMimeType: 'application/json', responseSchema: responseSchema));
@@ -1207,11 +1215,36 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         if (kDebugMode) {
           print("ClientException $e");
         }
+        retry += 1;
+        if (retry == 2) {
+          modelIndex = modelIndex + 1;
+          if (modelIndex == models.length) {
+            call = false;
+          }
+        } else if (retry == 3) {
+          call = false;
+        }
+        _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Error occurred. Trying again in a minute...');
+        await Future.delayed(Duration(minutes: 1));
+      } on InvalidApiKey catch (e) {
+        call = false;
+        if (kDebugMode) {
+          print("Invalid API Key $e");
+        }
+      } on FirebaseAIException catch (e) {
+        modelIndex = modelIndex + 1;
+        if (modelIndex == models.length) {
+          call = false;
+        }
+        if (kDebugMode) {
+          print("FirebaseAIException $e");
+        }
+        _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Error occurred. Trying again in a minute...');
         await Future.delayed(Duration(minutes: 1));
       } catch (e) {
         call = false;
         if (kDebugMode) {
-          print("Error $e");
+          print("Exception $e");
         }
       }
     } while (call);
@@ -1410,12 +1443,12 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
   // Parse standard questions batch response
   Future<List<Question>> _parseStandardBatchResponse(String response, List<QuestionTypeTask> tasks, int batch, String examId, int total) async {
     final List<Question> generatedQuestions = [];
-    /*_progress = QuestionGenerationProgress(current: 0, total: total, status: 'Understanding Gemini Response');
-    notifyListeners();*/
+    _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Understanding Gemini Response');
+    notifyListeners();
     try {
       final rawBatch = _cleanAndParseJson(response);
-      /*_progress = QuestionGenerationProgress(current: 0, total: total, status: 'Adding questions...');
-      notifyListeners();*/
+      _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Adding questions...');
+      notifyListeners();
       for (final qData in rawBatch) {
         final sectionIndex = qData['sectionIndex'];
 
