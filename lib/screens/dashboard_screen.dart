@@ -57,6 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   ProcessingStatus processingStatus = ProcessingStatus.idle;
   String? selectedGroupId;
   String _examId = "";
+  String _language = "";
   ExamConfig? _config;
   // List<Candidate> filteredCandidates = [];
   // List<Candidate> unfilteredCandidates = [];
@@ -268,7 +269,6 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                 _pageViewController.jumpToPage(0);
                 if (selectedIndex == 0) {
                   context.read<ExamProvider>().loadRecentExams();
-                  context.read<QuestionProvider>().cancelGeneration();
                 }
                 if (selectedIndex == 1) {
                   context.read<LibraryProvider>().loadLibraryFiles();
@@ -280,6 +280,9 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                 if (selectedIndex == 3) {
                   context.read<ExamBlueprintProvider>().fetchBlueprints();
                 }
+                final qProvider = context.read<QuestionProvider>();
+                qProvider.cancelGeneration();
+                qProvider.questions.clear();
               });
             },
           ),
@@ -988,7 +991,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                         ),
                       ),
                       SetupScreen(onNext: onSetupScreenNext),
-                      QuestionGenerationScreen(examId: _examId, config: _config, onNext: onQuestionScreenNext),
+                      QuestionGenerationScreen(examId: _examId, config: _config, onNext: onQuestionScreenNext, language: _language),
                       SimulationScreen(),
                     ],
                   ),
@@ -1022,6 +1025,9 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                     }
                                     if (_pageViewController.page == 2) {
                                       _pageViewController.jumpToPage(1);
+                                    }
+                                    if (_pageViewController.page == 3) {
+                                      _pageViewController.jumpToPage(2);
                                     }
                                   }
                                 },
@@ -1578,13 +1584,15 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> onSetupScreenNext({required String examId, required ExamConfig config, required List<AnalyzedChapter> chapters}) async {
+  Future<void> onSetupScreenNext({required String examId, required ExamConfig config, required String language}) async {
     // Navigator.of(context).pop();
     final supabase = context.read<SupabaseProvider>();
     final user = supabase.client.auth.currentSession?.user.id;
     if (user == null) return;
     _examId = examId;
     _config = config;
+    _language = language;
+
     // print("here");
     // await _pageViewController.animateToPage(2, duration: Duration(seconds: 3), curve: Curves.easeInOut);
     // final fullPath = 'library/$user/$fileName';

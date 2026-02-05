@@ -32,6 +32,7 @@ class QuestionProvider extends ChangeNotifier {
   QuestionGenerationProgress? _progress;
   bool _isGenerating = false;
   String? _error;
+  String? _language;
   late String _fileName;
 
   List<Question> get questions => _questions;
@@ -50,9 +51,10 @@ class QuestionProvider extends ChangeNotifier {
   int totalQuestions = 0;
 
   /// Start question generation directly in Flutter
-  Future<void> generateQuestions(String examId) async {
+  Future<void> generateQuestions(String examId, String language) async {
     _isGenerating = true;
     _error = null;
+    _language = language;
     await loadQuestions(examId);
 
     totalQuestions = _calculateTotalQuestions();
@@ -77,7 +79,6 @@ class QuestionProvider extends ChangeNotifier {
       if (kDebugMode) {
         print(batchCount);
       }
-      int currentProgress = 0;
 
       // Update to generating status
       _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Preparing Batches');
@@ -114,11 +115,15 @@ class QuestionProvider extends ChangeNotifier {
       }
       // Process each question type group in batch
       for (var entry in questionTypeGroups.entries) {
+        int currentProgress = 0;
         final String typeName = entry.key;
         final List<QuestionTypeTask> tasks = entry.value;
+        int totalQuestionsOfThisType =
+            tasks.fold(0, (sum, task) => sum + task.questionType.bloomsDistribution.fold(0, (total, bloom) => total + bloom.count)) * batchCount;
         if (kDebugMode) {
-          print("type name $typeName");
+          print("Total Questions of $typeName type: $totalQuestionsOfThisType");
         }
+
         try {
           if (typeName == 'Scenario Based') {
             _progress = QuestionGenerationProgress(current: currentProgress, total: totalQuestions, status: 'Generating Questions of $typeName');
@@ -135,7 +140,7 @@ class QuestionProvider extends ChangeNotifier {
             allQuestions.addAll(scenarioQuestions);
             currentProgress += scenarioQuestions.length;
 
-            await _saveQuestionsToDb(scenarioQuestions);
+            // await _saveQuestionsToDb(scenarioQuestions);
           } else {
             _progress = QuestionGenerationProgress(current: currentProgress, total: totalQuestions, status: 'Generating Questions of $typeName');
             notifyListeners();
@@ -150,13 +155,11 @@ class QuestionProvider extends ChangeNotifier {
             );
 
             allQuestions.addAll(standardQuestions);
-            // currentProgress += standardQuestions.length;
-
+            currentProgress += standardQuestions.length;
+            if (currentProgress < totalQuestionsOfThisType) {}
             // await _saveQuestionsToDb(standardQuestions);
           }
-
           // Update progress after each question type batch
-
           // await _updateProgressInDb(_progress!);
         } catch (e) {
           debugPrint('Failed to generate questions for type $typeName: $e');
@@ -674,18 +677,18 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         _libraryId = findId['library_id'];
         _candidateGroupId = findId['candidate_group_id'];
         _examBlueprintId = findId['exam_blueprint_id'];
-        if (kDebugMode) {
+        /*if (kDebugMode) {
           print("$examId : $_currentExamId $_libraryId $_candidateGroupId $_examBlueprintId");
-        }
+        }*/
       }
       try {
-        final response1 = await _supabase.from('questions').select().eq('exam_id', _currentExamId ?? "");
+        final response1 = await _supabase.from('questions').select().eq('exam_id', _currentExamId ?? "").order("section_id", ascending: true);
         // print("response1 $response1");
-        (response1 as List).map((json) {
+        /*(response1 as List).map((json) {
           if (kDebugMode) {
             print((json as Map<String, dynamic>).entries.where((test) => test.value == null).toList());
           }
-        }).toList();
+        }).toList();*/
         _questions = (response1 as List).map((json) => Question.fromDBJson(json)).toList();
         notifyListeners();
       } catch (e) {
@@ -973,15 +976,15 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
                 'bloomsLevel': Schema.string(description: 'Remember|Understand|Apply|Analyze|Evaluate|Create'),
                 'latexVersion': Schema.object(
                   properties: {
-                    'question': Schema.string(description: 'LaTeX version of the sub-question in Base64-encoded LaTeX source (UTF-8)'),
-                    'answer': Schema.string(description: 'LaTeX version of the answer of the sub-question in Base64-encoded LaTeX source (UTF-8)'),
-                    'rubric': Schema.string(description: 'LaTeX version of the rubric in Base64-encoded LaTeX source (UTF-8)'),
+                    'question': Schema.string(description: 'LaTeX version of the sub-question in a single Markdown fenced code block'),
+                    'answer': Schema.string(description: 'LaTeX version of the answer of the sub-question in a single Markdown fenced code block'),
+                    'rubric': Schema.string(description: 'LaTeX version of the rubric in a single Markdown fenced code block'),
                     'matchingPairs': Schema.array(
-                      description: 'LaTeX version of the matching pairs in Base64-encoded LaTeX source (UTF-8)',
+                      description: 'LaTeX version of the matching pairs in a single Markdown fenced code block',
                       items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
                     ),
                     'options': Schema.object(
-                      description: 'LaTeX version of the options in Base64-encoded LaTeX source (UTF-8)',
+                      description: 'LaTeX version of the options in a single Markdown fenced code block',
                       properties: {
                         "A": Schema.string(description: 'Option 1'),
                         "B": Schema.string(description: 'Option 2'),
@@ -990,7 +993,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
                       },
                       optionalProperties: [],
                     ),
-                    'correctOption': Schema.string(description: 'LaTeX version of the correct option in Base64-encoded LaTeX source (UTF-8)'),
+                    'correctOption': Schema.string(description: 'LaTeX version of the correct option in a single Markdown fenced code block'),
                   },
                   optionalProperties: ['options', 'matchingPairs', 'correctOption', 'scenarioText'],
                 ),
@@ -1010,15 +1013,15 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
           ),
           'latexVersion': Schema.object(
             properties: {
-              'question': Schema.string(description: 'LaTeX version of the question in Base64-encoded LaTeX source (UTF-8)'),
-              'answer': Schema.string(description: 'LaTeX version of the answer in Base64-encoded LaTeX source (UTF-8)'),
-              'rubric': Schema.string(description: 'LaTeX version of the rubric in Base64-encoded LaTeX source (UTF-8)'),
+              'question': Schema.string(description: 'LaTeX version of the question in a single Markdown fenced code block'),
+              'answer': Schema.string(description: 'LaTeX version of the answer in a single Markdown fenced code block'),
+              'rubric': Schema.string(description: 'LaTeX version of the rubric in a single Markdown fenced code block'),
               'matchingPairs': Schema.array(
-                description: 'LaTeX version of the matching pairs in Base64-encoded LaTeX source (UTF-8)',
+                description: 'LaTeX version of the matching pairs in a single Markdown fenced code block',
                 items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
               ),
               'options': Schema.object(
-                description: 'LaTeX version of the options in Base64-encoded LaTeX source (UTF-8)',
+                description: 'LaTeX version of the options in a single Markdown fenced code block',
                 properties: {
                   "A": Schema.string(description: 'Option 1'),
                   "B": Schema.string(description: 'Option 2'),
@@ -1027,8 +1030,8 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
                 },
                 optionalProperties: [],
               ),
-              'correctOption': Schema.string(description: 'LaTeX version of the correct option in Base64-encoded LaTeX source (UTF-8)'),
-              'scenarioText': Schema.string(description: 'LaTeX version of the scenario text in Base64-encoded LaTeX source (UTF-8)'),
+              'correctOption': Schema.string(description: 'LaTeX version of the correct option in a single Markdown fenced code block'),
+              'scenarioText': Schema.string(description: 'LaTeX version of the scenario text in a single Markdown fenced code block'),
             },
             optionalProperties: ['options', 'matchingPairs', 'correctOption', 'scenarioText'],
           ),
@@ -1080,42 +1083,56 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       print("Prompt $textPart");
     }
     final prompt = TextPart(textPart);
-    final String systemInstruction = '''
+    final String systemInstruction =
+        '''
       You must output ONLY valid JSON.
         Rules:
         - Output must be a JSON array.
         - Each array item represents exactly ONE question.
         - Each question must be unique
+        - Every information must be written ${_language ?? "English"} 
         - Each question MUST contain:
         - "sectionIndex" (integer)
         - "sectionName" (string)
         - "text" (string)
         - "concept" (string)
-        - "difficulty" (string) Easy|Medium|Hard
+        - "difficulty" (string: Easy | Medium | Hard)
         - "type" (string)
         - "modelAnswer" (string)
         - "bloomsLevel" (string)
         - "latexVersion" (string)
+        - "latexPackages" (string[])
+        - "latexEngine" (string: pdflatex | lualatex)
         - Never split the properties into separate objects.
         - Never omit required keys.
         - Do not add extra keys.
         - Do not add markdown or explanations.
         - Escape backslashes correctly for valid JSON strings
-        - Latex version of the question should be perfectly generated
+        - Latex version of each properties MUST be a single Markdown fenced code block.
+        - The LaTeX inside the fence must be raw LaTeX.
+        - Do NOT escape characters inside the LaTeX.
         - Distribute questions across sections proportionally
-        - All LaTeX content must be Base64-encoded
         - Do NOT include raw LaTeX anywhere except the value of the latexVersion array
-        - Do NOT wrap output in markdown
+        - Do NOT add or remove keys.
+        - Do NOT add explanations.
+        - Do NOT wrap the JSON in markdown.
+        - JSON must be syntactically valid.
         - Scan all generated content for specialized notation like complex math, chemistry, or unique Unicode characters.
         - Explicitly list every required package in the latexPackages field to ensure the code compiles without errors.
         - Select pdflatex for standard math, or lualatex if the content requires advanced fonts or complex graphics.
-        - Convert all final LaTeX source strings into strictly Base64-encoded UTF-8 format with proper padding before returning the response
         - When generating LaTeX content, ensure that any packages required for specialized notation (like chemical bonds, complex matrices, or commutative diagrams) are explicitly listed in the latexPackages field.
 
         Model Answer rules:
         - Each Model Answer should be the proper answer of the question justifying the rubric (if present) separately.
+        - Answer should be big enough to keep parity with the marks of the question
         
-      Follow the provided JSON schema exactly.''';
+        LaTeX rules:
+        - Generate correct, compilable LaTeX.
+        - Do NOT include \\documentclass or \\begin{document} or the packages, ony the content.
+        - Assume the LaTeX will be embedded into a larger document.
+        - Include only content, not preamble.
+        
+      Follow the provided JSON schema exactly. ''';
     if (kDebugMode) {
       print("System Instruction $systemInstruction");
     }
@@ -1157,15 +1174,15 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
           'bloomsLevel': Schema.string(description: 'Remember|Understand|Apply|Analyze|Evaluate|Create'),
           'latexVersion': Schema.object(
             properties: {
-              'question': Schema.string(description: 'LaTeX version of the question in Base64-encoded LaTeX source (UTF-8)'),
-              'answer': Schema.string(description: 'LaTeX version of the answer in Base64-encoded LaTeX source (UTF-8)'),
-              'rubric': Schema.string(description: 'LaTeX version of the rubric in Base64-encoded LaTeX source (UTF-8)'),
+              'question': Schema.string(description: 'LaTeX version of the question in a single Markdown fenced code block'),
+              'answer': Schema.string(description: 'LaTeX version of the answer in a single Markdown fenced code block'),
+              'rubric': Schema.string(description: 'LaTeX version of the rubric in a single Markdown fenced code block'),
               'matchingPairs': Schema.array(
-                description: 'LaTeX version of the matching pairs in Base64-encoded LaTeX source (UTF-8)',
+                description: 'LaTeX version of the matching pairs in a single Markdown fenced code block',
                 items: Schema.object(properties: {'left': Schema.string(), 'right': Schema.string()}, optionalProperties: []),
               ),
               'options': Schema.object(
-                description: 'LaTeX version of the options in Base64-encoded LaTeX source (UTF-8)',
+                description: 'LaTeX version of the options in a single Markdown fenced code block',
                 properties: {
                   "A": Schema.string(description: 'Option 1'),
                   "B": Schema.string(description: 'Option 2'),
@@ -1174,7 +1191,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
                 },
                 optionalProperties: [],
               ),
-              'correctOption': Schema.string(description: 'LaTeX version of the correct option in Base64-encoded LaTeX source (UTF-8)'),
+              'correctOption': Schema.string(description: 'LaTeX version of the correct option in a single Markdown fenced code block'),
             },
             optionalProperties: ['options', 'matchingPairs', 'correctOption'],
           ),
@@ -1336,7 +1353,7 @@ IMPORTANT:
     }).toList();
 
     return '''
-Generate a batch of "$typeName" questions for multiple exam sections.
+Generate a batch of "$typeName" questions for multiple exam sections in ${_language ?? "English"}.
 
 SYLLABUS CONTEXT:
 $syllabusContext
@@ -1491,8 +1508,7 @@ Ensure syllabus coverage is wide and concepts are distributed evenly.
           scenarioId: qData['scenarioID'],
           scenarioText: qData['scenarioText'],
 
-          subQuestions: (qData['subQuestions'] as List?)?.map((sq) => _parseSubQuestion(sq)).toList(),
-
+          // subQuestions: (qData['subQuestions'] as List?)?.map((sq) => _parseSubQuestion(sq)).toList(),
           latexVersion: LatexBlock.fromJson(Map<String, dynamic>.from(qData['latexVersion'])),
 
           latexPackages: qData['latexPackages'] ?? '',

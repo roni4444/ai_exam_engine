@@ -18,7 +18,7 @@ import '../widgets/library_modal.dart';
 enum ProcessingStatus { idle, extracting, translating, analyzing, completed }
 
 class SetupScreen extends StatefulWidget {
-  final Function({required String examId, required ExamConfig config, required List<AnalyzedChapter> chapters})? onNext;
+  final Function({required String examId, required ExamConfig config, required String language})? onNext;
 
   const SetupScreen({super.key, this.onNext});
 
@@ -37,7 +37,7 @@ class _SetupScreenState extends State<SetupScreen> {
   // String sourceText = '';
 
   String _examName = '';
-  String _examLanguage = 'en';
+  String _examLanguage = 'English';
   late String _examId;
   // int _studentCount = 3;
   // List<String> _studentNames = ['Student 1', 'Student 2', 'Student 3'];
@@ -588,9 +588,9 @@ class _SetupScreenState extends State<SetupScreen> {
         DropdownButton(
           value: _examLanguage,
           items: [
-            DropdownMenuItem(value: 'en', child: Text('English')),
-            DropdownMenuItem(value: 'bn', child: Text('Bengali')),
-            DropdownMenuItem(value: 'hi', child: Text('Hindi')),
+            DropdownMenuItem(value: 'English', child: Text('English')),
+            DropdownMenuItem(value: 'Bengali', child: Text('Bengali')),
+            DropdownMenuItem(value: 'Hindi', child: Text('Hindi')),
           ],
           onChanged: (value) {
             setState(() {
@@ -1313,7 +1313,7 @@ class _SetupScreenState extends State<SetupScreen> {
       widget.onNext?.call(
         examId: _examId,
         config: ExamConfig(examName: _examName, studentCount: _fetchedCandidates.length, studentNames: _fetchedCandidates, sections: sections),
-        chapters: _analyzedChapters,
+        language: _examLanguage,
       );
     }
     return;
@@ -1344,7 +1344,7 @@ class _SetupScreenState extends State<SetupScreen> {
       widget.onNext?.call(
         examId: _examId,
         config: ExamConfig(examName: _examName, studentCount: _fetchedCandidates.length, studentNames: _fetchedCandidates, sections: sections),
-        chapters: _analyzedChapters,
+        language: _examLanguage,
       );
     }
     return;
@@ -1406,7 +1406,7 @@ class _SetupScreenState extends State<SetupScreen> {
       widget.onNext?.call(
         examId: _examId,
         config: ExamConfig(examName: _examName, studentCount: _fetchedCandidates.length, studentNames: _fetchedCandidates, sections: sections),
-        chapters: _analyzedChapters,
+        language: _examLanguage,
       );
     }
     return;

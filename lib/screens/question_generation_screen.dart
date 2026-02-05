@@ -11,8 +11,9 @@ class QuestionGenerationScreen extends StatefulWidget {
   final Function({required List<Question> questions})? onNext;
   final String? examId;
   final ExamConfig? config;
+  final String? language;
 
-  const QuestionGenerationScreen({super.key, this.examId, required this.config, this.onNext});
+  const QuestionGenerationScreen({super.key, this.examId, required this.config, this.onNext, this.language});
 
   @override
   State<QuestionGenerationScreen> createState() => _QuestionGenerationScreenState();
@@ -487,7 +488,7 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> wit
   }
 
   Future<void> _startGeneration() async {
-    if (widget.examId != null) await context.read<QuestionProvider>().generateQuestions(widget.examId ?? "");
+    if (widget.examId != null) await context.read<QuestionProvider>().generateQuestions(widget.examId ?? "", widget.language ?? "English");
   }
 
   int _calculateTotalQuestions() {

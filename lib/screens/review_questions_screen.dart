@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/exam_models.dart';
 import '../providers/supabase_provider.dart';
 import '../widgets/question_card_widget.dart';
@@ -21,8 +22,12 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
   bool _isDownloading = false;
 
   Future<void> buildExamLatex(String examId) async {
-    final supabase = context.read<SupabaseProvider>();
-    final response = await supabase.client.functions.invoke('build_exam_latex', body: {'exam_id': examId});
+    final supabase = Supabase.instance.client;
+    final response = await supabase.functions.invoke(
+      'build_exam_latex',
+      body: {'exam_id': examId},
+      headers: {'Authorization': 'Bearer ${supabase.auth.currentSession?.accessToken}'},
+    );
 
     if (response.status != 200) {
       throw Exception(response.data ?? 'Failed to build exam LaTeX');

@@ -106,7 +106,7 @@ class Question {
   final String? scenarioId;
   final String? scenarioText;
 
-  final List<SubQuestion>? subQuestions;
+  // final List<SubQuestion>? subQuestions;
 
   final LatexBlock latexVersion;
   final String latexPackages;
@@ -135,7 +135,7 @@ class Question {
     required this.isScenario,
     this.scenarioId,
     this.scenarioText,
-    this.subQuestions,
+    // this.subQuestions,
     required this.latexVersion,
     required this.latexPackages,
     required this.latexEngine,
@@ -163,7 +163,7 @@ class Question {
       bloomsLevel: json['bloomsLevel'],
       isScenario: json['isScenario'] ?? false,
       scenarioText: json['scenarioText'],
-      subQuestions: json['subQuestions'] != null ? (json['subQuestions'] as List).map((q) => SubQuestion.fromJson(q)).toList() : null,
+      // subQuestions: json['subQuestions'] != null ? (json['subQuestions'] as List).map((q) => SubQuestion.fromJson(q)).toList() : null,
       latexVersion: LatexBlock.fromJson(json['latex_version']),
       latexPackages: json['latexPackages'],
       latexEngine: json['latexEngine'],
@@ -192,7 +192,7 @@ class Question {
       'bloomsLevel': bloomsLevel,
       'isScenario': isScenario,
       'scenarioText': scenarioText,
-      'subQuestions': subQuestions?.map((q) => q.toJson()).toList(),
+      // 'subQuestions': subQuestions?.map((q) => q.toJson()).toList(),
       'latexVersion': latexVersion,
     };
   }
@@ -211,18 +211,19 @@ class Question {
       modelAnswer: json['model_answer'] ?? '',
       rubric: List<String>.from(json['rubric'] ?? []),
       options: json['options'] != null ? Map<String, String>.from(json['options']) : null,
+      correctOption: json['correct_option'] ?? '',
       matchingPairs: json['matching_pairs'] != null ? (json['matching_pairs'] as List).map((m) => MatchingPair.fromJson(m)).toList() : null,
       negativeValue: (json['negative_value'] ?? 0.0).toDouble(),
       allowPartial: json['allow_partial'] ?? false,
       isOrType: json['is_or_type'] ?? false,
-      orGroupId: json['or_group_id'],
+      orGroupId: json['or_group_id'] ?? '',
       bloomsLevel: json['blooms_level'],
       isScenario: json['is_scenario'] ?? false,
-      scenarioText: json['scenario_text'],
-      subQuestions: json['sub_questions'] != null ? (json['sub_questions'] as List).map((q) => SubQuestion.fromJson(q)).toList() : null,
+      scenarioText: json['scenario_text'] ?? '',
+      // subQuestions: json['sub_questions'] != null ? (json['sub_questions'] as List).map((q) => SubQuestion.fromJson(q)).toList() : null,
       latexVersion: LatexBlock.fromJson(json['latex_version']),
-      latexPackages: json['latexPackages'],
-      latexEngine: json['latexEngine'],
+      latexPackages: json['latexPackages'] ?? '',
+      latexEngine: json['latexEngine'] ?? '',
     );
   }
 
