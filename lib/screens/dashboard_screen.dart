@@ -125,7 +125,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
     final supabaseClient = context.read<SupabaseProvider>();
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: MediaQuery.of(context).size.longestSide / 8 + MediaQuery.of(context).size.longestSide / 6,
+        leadingWidth: MediaQuery.of(context).size.longestSide / 2 /*8 + MediaQuery.of(context).size.longestSide / 6*/,
         leading: Padding(
           padding: EdgeInsets.only(left: MediaQuery.of(context).size.longestSide / 8),
           child: Row(

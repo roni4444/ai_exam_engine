@@ -32,7 +32,6 @@ class QuestionProvider extends ChangeNotifier {
   QuestionGenerationProgress? _progress;
   bool _isGenerating = false;
   String? _error;
-  String? _language;
   late String _fileName;
 
   List<Question> get questions => _questions;
@@ -54,7 +53,6 @@ class QuestionProvider extends ChangeNotifier {
   Future<void> generateQuestions(String examId, String language) async {
     _isGenerating = true;
     _error = null;
-    _language = language;
     await loadQuestions(examId);
 
     totalQuestions = _calculateTotalQuestions();
@@ -66,7 +64,9 @@ class QuestionProvider extends ChangeNotifier {
     _progress = QuestionGenerationProgress(current: 0, total: totalQuestions, status: 'Downloading Details');
     notifyListeners();
     final bytes = await supabase.storage.from('exam-assets').download('library/$userId/$_fileName');
-
+    if (kDebugMode) {
+      print("Language: $language");
+    }
     try {
       // Update progress in database
       // await _updateProgressInDb(_progress!);
@@ -152,6 +152,7 @@ class QuestionProvider extends ChangeNotifier {
               tasks: tasks,
               syllabusContext: syllabusContext,
               bytes: bytes,
+              language: language,
             );
 
             allQuestions.addAll(standardQuestions);
@@ -829,6 +830,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     required List<QuestionTypeTask> tasks,
     required String syllabusContext,
     required Uint8List bytes,
+    required String language,
   }) async {
     final List<Question> generatedQuestions = [];
 
@@ -859,6 +861,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         tasks: tasks,
         syllabusContext: syllabusContext,
         bytes: bytes,
+        language: language,
       );
       // if (kDebugMode) {
       //   print('The batch questions $batchQuestions of length ${batchQuestions.length}');
@@ -1068,6 +1071,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
     required List<QuestionTypeTask> tasks,
     required String syllabusContext,
     required Uint8List bytes,
+    required String language,
   }) async {
     // Build prompt for all questions of this type
     final String textPart = _buildStandardBatchPrompt(
@@ -1078,6 +1082,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       tasks: tasks,
       syllabusContext: syllabusContext,
       batch: batch,
+      language: language,
     );
     if (kDebugMode) {
       print("Prompt $textPart");
@@ -1090,7 +1095,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - Output must be a JSON array.
         - Each array item represents exactly ONE question.
         - Each question must be unique
-        - Every information must be written ${_language ?? "English"} 
+        - Every information must be written ${language ?? "English"} 
         - Each question MUST contain:
         - "sectionIndex" (integer)
         - "sectionName" (string)
@@ -1111,7 +1116,6 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - Latex version of each properties MUST be a single Markdown fenced code block.
         - The LaTeX inside the fence must be raw LaTeX.
         - Do NOT escape characters inside the LaTeX.
-        - Distribute questions across sections proportionally
         - Do NOT include raw LaTeX anywhere except the value of the latexVersion array
         - Do NOT add or remove keys.
         - Do NOT add explanations.
@@ -1126,11 +1130,16 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - Each Model Answer should be the proper answer of the question justifying the rubric (if present) separately.
         - Answer should be big enough to keep parity with the marks of the question
         
-        LaTeX rules:
+        LaTeX rules for the latex version only:
+        - You need to enclose all mathematical expressions and symbols with \$...\$ for the latex version. 
+        - You need to enclose all mathematical environments (e.g. equation) with \[...\] for the latex version. 
+        - This applies to symbols such as subscripts ( _ ), integrals ( \\int ), Greek letters ( \\alpha, \\beta, \\delta, etc ) and modifiers (\\vec{x}, \\tilde{x}, etc).
         - Generate correct, compilable LaTeX.
-        - Do NOT include \\documentclass or \\begin{document} or the packages, ony the content.
+        - Do NOT include \\documentclass or \\begin{document} or the packages, only the content.
         - Assume the LaTeX will be embedded into a larger document.
         - Include only content, not preamble.
+        - Use \\text inside \$...\$ enclosures only. 
+        - You should use just regular text instead.
         
       Follow the provided JSON schema exactly. ''';
     if (kDebugMode) {
@@ -1321,6 +1330,7 @@ IMPORTANT:
     required int totalHard,
     required List<QuestionTypeTask> tasks,
     required String syllabusContext,
+    required String language,
   }) {
     // Collect Bloom's distribution if specified
     final bloomsInstructions = <String>[];
@@ -1353,7 +1363,7 @@ IMPORTANT:
     }).toList();
 
     return '''
-Generate a batch of "$typeName" questions for multiple exam sections in ${_language ?? "English"}.
+Generate a batch of "$typeName" questions for multiple exam sections in ${language ?? "English"}.
 
 SYLLABUS CONTEXT:
 $syllabusContext

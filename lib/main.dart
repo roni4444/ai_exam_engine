@@ -42,7 +42,6 @@ Future<void> main() async {
       url: "https://hrxpntqefhfatgoagrsu.supabase.co",
       anonKey:
           "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyeHBudHFlZmhmYXRnb2FncnN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDgyMTAsImV4cCI6MjA4MjU4NDIxMH0.ejIyIACpojXC3EGXpx59cyLY0ClJqL7LHCS_80rErA0",
-      debug: kDebugMode,
     );
     final firebaseAppCheck = FirebaseAppCheck.instance;
     if (kDebugMode) {

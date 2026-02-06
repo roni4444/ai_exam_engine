@@ -91,7 +91,7 @@ class QuestionTypeConfig {
   };
 
   factory QuestionTypeConfig.fromJson(Map<String, dynamic> json) => QuestionTypeConfig(
-    type: json['type'] ?? 'Multiple Choice',
+    type: json['type'] ?? '',
     marks: json['marks'] ?? 1,
     count: json['count'] != null ? DifficultyCount.fromJson(json['count']) : DifficultyCount(),
     negativeMarks: json['negativeMarks'] ?? false,

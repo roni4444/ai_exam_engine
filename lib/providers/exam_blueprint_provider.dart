@@ -19,7 +19,7 @@ class ExamBlueprintProvider with ChangeNotifier {
   Future<void> fetchBlueprints() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    // notifyListeners();
 
     try {
       final userId = _supabase.auth.currentUser?.id;

@@ -18,17 +18,14 @@ class ReviewQuestionsScreen extends StatefulWidget {
 }
 
 class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
-  String _selectedLanguage = 'English';
+  // String _selectedLanguage = 'English';
   bool _isDownloading = false;
 
   Future<void> buildExamLatex(String examId) async {
     final supabase = Supabase.instance.client;
-    final response = await supabase.functions.invoke(
-      'build_exam_latex',
-      body: {'exam_id': examId},
-      headers: {'Authorization': 'Bearer ${supabase.auth.currentSession?.accessToken}'},
-    );
-
+    final session = supabase.auth.currentSession;
+    if (session == null) return;
+    final response = await supabase.functions.invoke('build_exam_latex', body: {'exam_id': examId});
     if (response.status != 200) {
       throw Exception(response.data ?? 'Failed to build exam LaTeX');
     }
@@ -42,14 +39,16 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
     setState(() => _isDownloading = true);
     try {
       await buildExamLatex(widget.questions.first.examId);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF task created')));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
     setState(() => _isDownloading = false);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Downloaded questions in $_selectedLanguage'), backgroundColor: Colors.green));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Downloaded questions'), backgroundColor: Colors.green));
   }
 
   void _distributeToStudents() {
@@ -99,7 +98,7 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
             color: const Color(0xFFF8FAFC),
             child: Row(
               children: [
-                const Text('Language:', style: TextStyle(fontWeight: FontWeight.w600)),
+                /*const Text('Language:', style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(width: 12),
                 DropdownButton<String>(
                   value: _selectedLanguage,
@@ -107,24 +106,64 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
                   onChanged: (value) {
                     setState(() => _selectedLanguage = value!);
                   },
-                ),
+                ),*/
                 const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: _isDownloading ? null : preparePDF,
-                  icon: _isDownloading
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.download, color: Colors.white),
-                  label: const Text('Prepare Questions', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _isDownloading ? null : preparePDF,
-                  icon: _isDownloading
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.book, color: Colors.white),
-                  label: const Text('Download Question', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+                Consumer<SupabaseProvider>(
+                  builder: (context, supabaseProvider, _) {
+                    return StreamBuilder(
+                      stream: supabaseProvider.client.from("pdf_tasks").stream(primaryKey: ["id"]).eq("exam_id", widget.questions.first.examId),
+                      initialData: supabaseProvider.client
+                          .from("pdf_tasks")
+                          .select()
+                          .eq("exam_id", widget.questions.first.examId)
+                          .eq("task_type", "exam_pdf")
+                          .single(),
+                      builder: (context, asyncSnapshot) {
+                        if (asyncSnapshot.connectionState == ConnectionState.waiting) {
+                          return const CircularProgressIndicator();
+                        }
+                        if (asyncSnapshot.connectionState == ConnectionState.done) {
+                          if (asyncSnapshot.hasData) {
+                            final task = asyncSnapshot.data as Map<String, dynamic>;
+                            if (task['status'] == 'completed') {
+                              return ElevatedButton.icon(
+                                onPressed: _isDownloading ? null : preparePDF,
+                                icon: _isDownloading
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.book, color: Colors.white),
+                                label: const Text('Download Question', style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+                              );
+                            } else if (task['status'] == 'failed') {
+                              return ElevatedButton.icon(
+                                onPressed: _isDownloading ? null : preparePDF,
+                                icon: _isDownloading
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.download, color: Colors.white),
+                                label: const Text('Prepare Questions', style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
+                              );
+                            } else {
+                              return ElevatedButton.icon(
+                                onPressed: null,
+                                icon: const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                                label: const Text('Preparing Questions', style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
+                              );
+                            }
+                          }
+                        }
+                        return ElevatedButton.icon(
+                          onPressed: _isDownloading ? null : preparePDF,
+                          icon: _isDownloading
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.download, color: Colors.white),
+                          label: const Text('Prepare Questions', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
+                        );
+                      },
+                    );
+                  },
                 ),
               ],
             ),
