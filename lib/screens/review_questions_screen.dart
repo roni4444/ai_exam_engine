@@ -7,6 +7,10 @@ import '../providers/supabase_provider.dart';
 import '../widgets/question_card_widget.dart';
 import '../widgets/stat_card_widget.dart';
 import 'simulation_screen.dart';
+import 'dart:typed_data';
+import 'dart:js_interop';
+
+import 'package:web/web.dart' as web;
 
 class ReviewQuestionsScreen extends StatefulWidget {
   final List<Question> questions;
@@ -40,19 +44,44 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
     try {
       await buildExamLatex(widget.questions.first.examId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF task created')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exam paper ready to download')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
     setState(() => _isDownloading = false);
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Downloaded questions'), backgroundColor: Colors.green));
+    /* if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Downloaded questions'), backgroundColor: Colors.green));*/
   }
 
-  void _distributeToStudents() {
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SimulationScreen()));
+  Future<void> downloadPDF() async {
+    setState(() => _isDownloading = true);
+    try {
+      final bytes = await Supabase.instance.client.storage.from('exam-assets').download('exams/${widget.questions.first.examId}/exam.pdf');
+      if (kIsWeb) {
+        final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: "application/pdf"));
+
+        final url = web.URL.createObjectURL(blob);
+
+        final anchor = web.HTMLAnchorElement()
+          ..href = url
+          ..download = "exam.pdf";
+
+        anchor.click();
+
+        web.URL.revokeObjectURL(url);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exam paper ready to download')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+    setState(() => _isDownloading = false);
+
+    /* if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Downloaded questions'), backgroundColor: Colors.green));*/
   }
 
   @override
@@ -97,6 +126,8 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
             padding: const EdgeInsets.all(24),
             color: const Color(0xFFF8FAFC),
             child: Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 /*const Text('Language:', style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(width: 12),
@@ -107,7 +138,6 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
                     setState(() => _selectedLanguage = value!);
                   },
                 ),*/
-                const Spacer(),
                 Consumer<SupabaseProvider>(
                   builder: (context, supabaseProvider, _) {
                     return StreamBuilder(
@@ -122,33 +152,39 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
                         if (asyncSnapshot.connectionState == ConnectionState.waiting) {
                           return const CircularProgressIndicator();
                         }
-                        if (asyncSnapshot.connectionState == ConnectionState.done) {
+                        if (asyncSnapshot.connectionState == ConnectionState.active) {
                           if (asyncSnapshot.hasData) {
-                            final task = asyncSnapshot.data as Map<String, dynamic>;
-                            if (task['status'] == 'completed') {
-                              return ElevatedButton.icon(
-                                onPressed: _isDownloading ? null : preparePDF,
-                                icon: _isDownloading
-                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                    : const Icon(Icons.book, color: Colors.white),
-                                label: const Text('Download Question', style: TextStyle(color: Colors.white)),
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+                            final task = asyncSnapshot.data as List<Map<String, dynamic>>;
+                            if (task.firstWhere((element) => element['task_type'] == 'exam_pdf')['status'] == 'completed') {
+                              return Flexible(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isDownloading ? null : downloadPDF,
+                                  icon: _isDownloading
+                                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                      : const Icon(Icons.book, color: Colors.white),
+                                  label: const Text('Download Question', style: TextStyle(color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+                                ),
                               );
-                            } else if (task['status'] == 'failed') {
-                              return ElevatedButton.icon(
-                                onPressed: _isDownloading ? null : preparePDF,
-                                icon: _isDownloading
-                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                    : const Icon(Icons.download, color: Colors.white),
-                                label: const Text('Prepare Questions', style: TextStyle(color: Colors.white)),
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
+                            } else if (task.firstWhere((element) => element['task_type'] == 'exam_pdf')['status'] == 'failed') {
+                              return Flexible(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isDownloading ? null : preparePDF,
+                                  icon: _isDownloading
+                                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                      : const Icon(Icons.download, color: Colors.white),
+                                  label: const Text('Prepare Questions', style: TextStyle(color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
+                                ),
                               );
                             } else {
-                              return ElevatedButton.icon(
-                                onPressed: null,
-                                icon: const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                                label: const Text('Preparing Questions', style: TextStyle(color: Colors.white)),
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
+                              return Flexible(
+                                child: ElevatedButton.icon(
+                                  onPressed: null,
+                                  icon: const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                                  label: const Text('Preparing Questions', style: TextStyle(color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
+                                ),
                               );
                             }
                           }
@@ -158,7 +194,7 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
                           icon: _isDownloading
                               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                               : const Icon(Icons.download, color: Colors.white),
-                          label: const Text('Prepare Questions', style: TextStyle(color: Colors.white)),
+                          label: const Text('Prepare', style: TextStyle(color: Colors.white)),
                           style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
                         );
                       },

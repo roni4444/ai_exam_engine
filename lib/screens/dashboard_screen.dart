@@ -52,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   final completeColor = Color(0xff5e6172);
   final inProgressColor = Color(0xff5ec792);
   final todoColor = Color(0xffd1d2d7);
-  final processes = ['Setup Exam', 'Question Generation', 'Question Distribution', 'Grading and Evaluation', 'Report Generation'];
+  final processes = ['Setup Exam', 'Question Generation', 'Question Distribution'];
   final List<IconData> processesIcons = [Icons.settings, Icons.auto_fix_high, Icons.send, Icons.grading, Icons.summarize];
   ProcessingStatus processingStatus = ProcessingStatus.idle;
   String? selectedGroupId;
@@ -992,7 +992,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                       ),
                       SetupScreen(onNext: onSetupScreenNext),
                       QuestionGenerationScreen(examId: _examId, config: _config, onNext: onQuestionScreenNext, language: _language),
-                      SimulationScreen(),
+                      SimulationScreen(examId: _examId, config: _config),
                     ],
                   ),
                 ),
@@ -1438,82 +1438,84 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
         color: const Color(0xFFF8FAFC),
         border: Border(top: BorderSide(color: Colors.grey.shade100)),
       ),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () async {
-            if (_pageViewController.hasClients) {
-              if (_pageViewController.page == 1) {
-                final examProvider = context.read<ExamProvider>();
-                await _pageViewController.animateToPage(2, duration: Duration(seconds: 3), curve: Curves.easeInOut);
-                if (!mounted) return;
-                examProvider.loadRecentExams();
-              } else if (_pageViewController.page == 2) {
-                await _pageViewController.animateToPage(3, duration: Duration(seconds: 3), curve: Curves.easeInOut);
-              }
-            }
-            if (kDebugMode) {
-              print(_pageViewController.page);
-            }
-            setState(() {});
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2563EB),
-            // foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 10,
-            shadowColor: const Color(0xFF2563EB).withValues(alpha: 255 * 0.3),
-          ),
-          child: (_pageViewController.hasClients)
-              ? (_pageViewController.page == 1)
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text(
-                            'Save and Next',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 20, color: Colors.white),
-                        ],
-                      )
-                    : (_pageViewController.page == 2)
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.people, color: Colors.white),
-                          const SizedBox(width: 8),
-                          Consumer<ExamProvider>(
-                            builder: (context, examProvider, _) {
-                              return Text(
-                                'Distribute to ${examProvider.students.isNotEmpty ? examProvider.students.length : '3'} Students',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward, color: Colors.white),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text(
-                            'Preparing....',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
-                          ),
-                          SizedBox(width: 18),
-                          CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 3.0,
-                            constraints: BoxConstraints(maxWidth: 18, minWidth: 18, maxHeight: 18, minHeight: 18),
-                          ),
-                        ],
-                      )
-              : null,
-        ),
-      ),
+      child: (_pageViewController.hasClients && _pageViewController.page == 3)
+          ? null
+          : SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (_pageViewController.hasClients) {
+                    if (_pageViewController.page == 1) {
+                      final examProvider = context.read<ExamProvider>();
+                      await _pageViewController.animateToPage(2, duration: Duration(seconds: 3), curve: Curves.easeInOut);
+                      if (!mounted) return;
+                      examProvider.loadRecentExams();
+                    } else if (_pageViewController.page == 2) {
+                      await _pageViewController.animateToPage(3, duration: Duration(seconds: 3), curve: Curves.easeInOut);
+                    }
+                  }
+                  if (kDebugMode) {
+                    print(_pageViewController.page);
+                  }
+                  setState(() {});
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  // foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 10,
+                  shadowColor: const Color(0xFF2563EB).withValues(alpha: 255 * 0.3),
+                ),
+                child: (_pageViewController.hasClients)
+                    ? (_pageViewController.page == 1)
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Text(
+                                  'Save and Next',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                                ),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward, size: 20, color: Colors.white),
+                              ],
+                            )
+                          : (_pageViewController.page == 2)
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.people, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Consumer<ExamProvider>(
+                                  builder: (context, examProvider, _) {
+                                    return Text(
+                                      'Go To Paper Distribution',
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.arrow_forward, color: Colors.white),
+                              ],
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Text(
+                                  'Preparing....',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                                ),
+                                SizedBox(width: 18),
+                                CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3.0,
+                                  constraints: BoxConstraints(maxWidth: 18, minWidth: 18, maxHeight: 18, minHeight: 18),
+                                ),
+                              ],
+                            )
+                    : null,
+              ),
+            ),
     );
   }
 

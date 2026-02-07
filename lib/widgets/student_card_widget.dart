@@ -61,7 +61,7 @@ class StudentCard extends StatelessWidget {
             ),
             Text('ID: ${student['id']}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             const SizedBox(height: 16),
-            Container(
+            /*Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
               child: DropdownButton<String>(
@@ -82,8 +82,8 @@ class StudentCard extends StatelessWidget {
                   }
                 },
               ),
-            ),
-            const Spacer(),
+            ),*/
+            // const Spacer(),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -97,7 +97,7 @@ class StudentCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(

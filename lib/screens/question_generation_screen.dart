@@ -298,12 +298,19 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> wit
           ),
           const SizedBox(height: 32),
 
-          ElevatedButton(
-            onPressed: () => showDialog(
-              context: context,
-              builder: (context) => ReviewQuestionsScreen(questions: questions),
-            ),
-            child: Text("Review Questions"),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (context) => ReviewQuestionsScreen(questions: questions),
+                ),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+                child: Text("Review Questions", style: TextStyle(color: Colors.white)),
+              ),
+            ],
           ),
           /*// Questions Preview
           const Text(

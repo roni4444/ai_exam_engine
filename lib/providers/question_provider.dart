@@ -1088,14 +1088,13 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       print("Prompt $textPart");
     }
     final prompt = TextPart(textPart);
-    final String systemInstruction =
-        '''
+    final String systemInstruction = '''
       You must output ONLY valid JSON.
         Rules:
         - Output must be a JSON array.
         - Each array item represents exactly ONE question.
         - Each question must be unique
-        - Every information must be written ${language ?? "English"} 
+        - Every information must be written English
         - Each question MUST contain:
         - "sectionIndex" (integer)
         - "sectionName" (string)
@@ -1107,7 +1106,7 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - "bloomsLevel" (string)
         - "latexVersion" (string)
         - "latexPackages" (string[])
-        - "latexEngine" (string: pdflatex | lualatex)
+        - "latexEngine" (string: lualatex)
         - Never split the properties into separate objects.
         - Never omit required keys.
         - Do not add extra keys.
@@ -1123,12 +1122,14 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - JSON must be syntactically valid.
         - Scan all generated content for specialized notation like complex math, chemistry, or unique Unicode characters.
         - Explicitly list every required package in the latexPackages field to ensure the code compiles without errors.
-        - Select pdflatex for standard math, or lualatex if the content requires advanced fonts or complex graphics.
+        - Generate the content assuming the LaTex will be compiled in lualatex only
+        - The following packages will be added to every latex document so no need to add in package list - enumitem, fontspec, unicode-math
         - When generating LaTeX content, ensure that any packages required for specialized notation (like chemical bonds, complex matrices, or commutative diagrams) are explicitly listed in the latexPackages field.
 
         Model Answer rules:
         - Each Model Answer should be the proper answer of the question justifying the rubric (if present) separately.
         - Answer should be big enough to keep parity with the marks of the question
+        - For correctOption mention the answer not the option letter.
         
         LaTeX rules for the latex version only:
         - You need to enclose all mathematical expressions and symbols with \$...\$ for the latex version. 
@@ -1363,7 +1364,7 @@ IMPORTANT:
     }).toList();
 
     return '''
-Generate a batch of "$typeName" questions for multiple exam sections in ${language ?? "English"}.
+Generate a batch of "$typeName" questions for multiple exam sections in English.
 
 SYLLABUS CONTEXT:
 $syllabusContext

@@ -1,12 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/exam_config.dart';
 import '../providers/exam_provider.dart';
+import '../providers/supabase_provider.dart';
 import '../widgets/student_card_widget.dart';
-import 'grading_screen.dart';
 
 class SimulationScreen extends StatefulWidget {
-  const SimulationScreen({super.key});
+  final String examId;
+  final ExamConfig? config;
+  const SimulationScreen({super.key, required this.examId, required this.config});
 
   @override
   State<SimulationScreen> createState() => _SimulationScreenState();
@@ -15,6 +20,7 @@ class SimulationScreen extends StatefulWidget {
 class _SimulationScreenState extends State<SimulationScreen> {
   final Map<String, bool> _uploadedScripts = {};
   final ImagePicker _picker = ImagePicker();
+  int uploadedCount = 0;
 
   // Mock students
   final List<Map<String, dynamic>> _students = [
@@ -22,6 +28,20 @@ class _SimulationScreenState extends State<SimulationScreen> {
     {'id': 'S2', 'name': 'Student 2', 'language': 'English'},
     {'id': 'S3', 'name': 'Student 3', 'language': 'English'},
   ];
+
+  Future<void> buildStudentLatex(String examId) async {
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+    if (session == null) return;
+    final response = await supabase.functions.invoke('build_student_pdfs', body: {'exam_id': examId});
+    if (response.status != 200) {
+      throw Exception(response.data ?? 'Failed to build exam LaTeX');
+    }
+
+    if (kDebugMode) {
+      print('Edge function response: ${response.data}');
+    }
+  }
 
   Future<void> _downloadExam(Map<String, dynamic> student) async {
     showDialog(
@@ -56,34 +76,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
     }
   }
 
-  void _startGrading() {
-    final uploadedCount = _uploadedScripts.values.where((v) => v).length;
-
-    if (uploadedCount == 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please upload at least one answer script'), backgroundColor: Colors.red));
-      return;
-    }
-
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const GradingScreen()));
-  }
-
   @override
   Widget build(BuildContext context) {
-    final uploadedCount = _uploadedScripts.values.where((v) => v).length;
-
     return Scaffold(
-      appBar: AppBar(
-        title: Consumer<ExamProvider>(
-          builder: (context, examProvider, _) {
-            return Text('${examProvider.examName} Distribution');
-          },
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1E293B),
-        elevation: 0,
-      ),
       body: Column(
         children: [
           // Header
@@ -93,21 +88,70 @@ class _SimulationScreenState extends State<SimulationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Exam Distribution',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Consumer<ExamProvider>(
+                      builder: (context, examProvider, _) {
+                        return Text(
+                          '${examProvider.examName} Distribution',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                        );
+                      },
+                    ),
+                    ElevatedButton(onPressed: () {}, child: Text("Distribute Questions")),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                Text('Download exams and upload answer scripts for grading', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                Text('Download exams papers', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: uploadedCount / _students.length,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                Row(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Consumer<SupabaseProvider>(
+                      builder: (context, supabaseProvider, _) {
+                        return StreamBuilder(
+                          stream: supabaseProvider.client.from("pdf_tasks").stream(primaryKey: ["id"]).eq("exam_id", widget.examId ?? ""),
+                          initialData: supabaseProvider.client
+                              .from("pdf_tasks")
+                              .select()
+                              .eq("exam_id", widget.examId ?? "")
+                              .eq("task_type", "student_pdf")
+                              .single(),
+                          builder: (context, asyncSnapshot) {
+                            final task = asyncSnapshot.data as List<Map<String, dynamic>>;
+                            setState(() {
+                              uploadedCount = task.where((element) => element['task_type'] == 'student_pdf').toList().length;
+                            });
+                            return Expanded(
+                              child: LinearProgressIndicator(
+                                value: uploadedCount / widget.config!.studentCount * 2,
+                                backgroundColor: Colors.grey[200],
+                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    /*Expanded(
+                      child: LinearProgressIndicator(
+                        value: uploadedCount / _students.length,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                      ),
+                    ),*/
+                    SizedBox(width: 16),
+                    Text(
+                      '$uploadedCount of ${_students.length} question paper ready',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '$uploadedCount of ${_students.length} scripts uploaded',
+                  'Ready to start',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600),
                 ),
               ],
@@ -122,7 +166,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 crossAxisCount: 3,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 0.85,
+                childAspectRatio: 1.6,
               ),
               itemCount: _students.length,
               itemBuilder: (context, index) {
@@ -144,7 +188,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
             ),
           ),
 
-          // Action Button
+          /*// Action Button
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -193,7 +237,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 ),
               ],
             ),
-          ),
+          ),*/
         ],
       ),
     );
