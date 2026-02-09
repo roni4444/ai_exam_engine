@@ -530,11 +530,12 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                                       if (!context.mounted) return;
                                                       _examId = exam.id;
                                                       _group_id = data?['group_id'];
+                                                      print(data);
                                                       // candidates = examProvider.students;
-                                                      if (data != null && examProvider.examState == 'setup') {
+                                                      if (data != null && examProvider.examState == 'setupComplete') {
                                                         _pageViewController.jumpToPage(1);
                                                       }
-                                                      if (data != null && examProvider.examState == 'setupComplete') {
+                                                      if (data != null && examProvider.examState == 'Question Generated') {
                                                         _pageViewController.jumpToPage(2);
                                                       }
                                                     },

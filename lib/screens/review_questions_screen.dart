@@ -142,19 +142,29 @@ class _ReviewQuestionsScreenState extends State<ReviewQuestionsScreen> {
                   builder: (context, supabaseProvider, _) {
                     return StreamBuilder(
                       stream: supabaseProvider.client.from("pdf_tasks").stream(primaryKey: ["id"]).eq("exam_id", widget.questions.first.examId),
-                      initialData: supabaseProvider.client
+                      /*initialData: supabaseProvider.client
                           .from("pdf_tasks")
                           .select()
                           .eq("exam_id", widget.questions.first.examId)
                           .eq("task_type", "exam_pdf")
-                          .single(),
+                          .single(),*/
                       builder: (context, asyncSnapshot) {
                         if (asyncSnapshot.connectionState == ConnectionState.waiting) {
                           return const CircularProgressIndicator();
                         }
                         if (asyncSnapshot.connectionState == ConnectionState.active) {
-                          if (asyncSnapshot.hasData) {
-                            final task = asyncSnapshot.data as List<Map<String, dynamic>>;
+                          if (asyncSnapshot.hasData && asyncSnapshot.data!.isNotEmpty) {
+                            final task = asyncSnapshot.data;
+                            if (task == null) {
+                              return ElevatedButton.icon(
+                                onPressed: _isDownloading ? null : preparePDF,
+                                icon: _isDownloading
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.download, color: Colors.white),
+                                label: const Text('Prepare', style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
+                              );
+                            }
                             if (task.firstWhere((element) => element['task_type'] == 'exam_pdf')['status'] == 'completed') {
                               return Flexible(
                                 child: ElevatedButton.icon(
