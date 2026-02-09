@@ -892,7 +892,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                       'Your Blueprints',
                                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[600], letterSpacing: 1.2),
                                     ),
-                                    Container(
+                                    /*Container(
                                       constraints: BoxConstraints(maxWidth: 300),
                                       padding: const EdgeInsets.all(24),
                                       decoration: BoxDecoration(
@@ -926,7 +926,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                           ),
                                         ),
                                       ),
-                                    ),
+                                    ),*/
                                   ],
                                 ),
                                 const SizedBox(height: 16),
@@ -968,7 +968,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                     SizedBox(width: 10),
                                     Expanded(
                                       child: Container(
-                                        height: 700,
+                                        height: MediaQuery.of(context).size.shortestSide / 1.4,
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           borderRadius: BorderRadius.circular(16),
