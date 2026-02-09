@@ -430,12 +430,12 @@ class CandidateProvider with ChangeNotifier {
     }
   }
 
-  /// Get candidates by group ID
+  /*/// Get candidates by group ID
   List<Candidate> getCandidatesByGroup(String groupId) {
     final group = _groups.firstWhere((g) => g.id == groupId, orElse: () => throw Exception('Group not found'));
 
     return _candidates.where((c) => group.candidateIds.contains(c.id)).toList();
-  }
+  }*/
 
   /// Get unique class values
   List<String> get uniqueClasses {

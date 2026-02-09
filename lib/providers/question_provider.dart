@@ -241,6 +241,7 @@ class QuestionProvider extends ChangeNotifier {
       _questions = allQuestions;
 
       // Mark as complete
+      await supabase.from("exams").update({"state": "Question Generated", "is_question_generated": true}).eq("user_id", userId).eq("id", examId);
       _progress = QuestionGenerationProgress(current: allQuestions.length, total: allQuestions.length, status: 'completed', isComplete: true);
       _isGenerating = false;
       notifyListeners();
@@ -1088,7 +1089,8 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
       print("Prompt $textPart");
     }
     final prompt = TextPart(textPart);
-    final String systemInstruction = '''
+    final String systemInstruction =
+        '''
       You must output ONLY valid JSON.
         Rules:
         - Output must be a JSON array.
@@ -1101,9 +1103,9 @@ Return JSON array with fields: text, concept, difficulty, type, modelAnswer, rub
         - "text" (string)
         - "concept" (string)
         - "difficulty" (string: Easy | Medium | Hard)
-        - "type" (string)
+        - "type" (string: $typeName) [cannot be anything other than these - 'Multiple Choice', 'True/False', 'Matching', 'Very Short Answer', 'Short Answer', 'Long Answer', 'Mathematical Problem', 'Equation Derivation']
         - "modelAnswer" (string)
-        - "bloomsLevel" (string)
+        - "bloomsLevel" (string : Remember|Understand|Apply|Analyze|Evaluate|Create)
         - "latexVersion" (string)
         - "latexPackages" (string[])
         - "latexEngine" (string: lualatex)

@@ -1,19 +1,22 @@
+import 'package:ai_exam_engine/models/candidate_model.dart';
 import 'package:flutter/material.dart';
+import 'package:recase/recase.dart';
 
 class StudentCard extends StatelessWidget {
-  final Map<String, dynamic> student;
-  final bool hasUploaded;
-  final VoidCallback onDownload;
-  final VoidCallback onUpload;
-  final Function(String) onLanguageChange;
+  final Candidate student;
+  final bool isReady;
+  final bool isDownloading;
+  final VoidCallback onQuestionDownload;
+  final VoidCallback onAnswerDownload;
+  /*final Function(String) onLanguageChange;*/
 
   const StudentCard({
     super.key,
     required this.student,
-    required this.hasUploaded,
-    required this.onDownload,
-    required this.onUpload,
-    required this.onLanguageChange,
+    required this.onQuestionDownload,
+    required this.onAnswerDownload,
+    required this.isReady,
+    required this.isDownloading,
   });
 
   @override
@@ -22,7 +25,7 @@ class StudentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: hasUploaded ? const Color(0xFF059669) : Colors.grey[200]!, width: hasUploaded ? 2 : 1),
+        border: Border.all(color: /*hasUploaded ? const Color(0xFF059669) :*/ Colors.grey[200]!, width: /*hasUploaded ? 2 :*/ 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 255 * 0.05),
@@ -39,27 +42,27 @@ class StudentCard extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: hasUploaded ? const Color(0xFF059669) : const Color(0xFF2563EB),
+                  backgroundColor: /*hasUploaded ? const Color(0xFF059669) : */ const Color(0xFF2563EB),
                   child: Text(
-                    student['name'][0],
+                    student.name.substring(0, 1).toUpperCase(),
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
-                const Spacer(),
+                /*const Spacer(),
                 if (hasUploaded)
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(color: const Color(0xFF059669), borderRadius: BorderRadius.circular(20)),
                     child: const Icon(Icons.check, color: Colors.white, size: 16),
-                  ),
+                  ),*/
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              student['name'],
+              student.name.titleCase,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
             ),
-            Text('ID: ${student['id']}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text('Roll No.: ${student.rollNumber}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             const SizedBox(height: 16),
             /*Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -87,9 +90,9 @@ class StudentCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: onDownload,
+                onPressed: (isReady && !isDownloading) ? onQuestionDownload : null,
                 icon: const Icon(Icons.download, size: 18),
-                label: const Text('Download Exam'),
+                label: const Text('Download Question'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E293B),
                   foregroundColor: Colors.white,
@@ -98,6 +101,20 @@ class StudentCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: (isReady && !isDownloading) ? onAnswerDownload : null,
+                icon: const Icon(Icons.download, size: 18),
+                label: const Text('Download Answer'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B1E1E),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            /*const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -110,7 +127,7 @@ class StudentCard extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
-            ),
+            ),*/
           ],
         ),
       ),

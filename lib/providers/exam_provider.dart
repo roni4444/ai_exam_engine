@@ -19,6 +19,7 @@ class ExamProvider with ChangeNotifier {
   String? _errorMessage;
   int _currentProgress = 0;
   int _totalProgress = 0;
+  String _examState = "setup";
 
   ExamState get state => _state;
   List<ExamRecord> get recentExams => _recentExams;
@@ -27,6 +28,7 @@ class ExamProvider with ChangeNotifier {
   List<Candidate> get students => _students;
   String? get currentExamId => _currentExamId;
   String get examName => _examName;
+  String get examState => _examState;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   int get currentProgress => _currentProgress;
@@ -138,15 +140,13 @@ class ExamProvider with ChangeNotifier {
       notifyListeners();
 
       final exam = await _supabase.from('exams').select().eq('id', examId).single();
-      if (kDebugMode) {
-        print("exam ${exam["state"]}");
-      }
+      _examState = exam["state"];
 
       final chapters = await _supabase.from('chapters').select().eq('file_id', exam['library_id']);
 
       // final questions = await _supabase.from('questions').select().eq('exam_id', examId);
 
-      final candidate = await _supabase.from('candidate_group_members').select().eq('group_id', exam['candidate_group_id']);
+      final candidate = await _supabase.from('candidate_group_members').select('candidate_id').eq('group_id', exam['candidate_group_id']);
 
       _currentExamId = examId;
       _examName = exam['name'];
@@ -154,9 +154,16 @@ class ExamProvider with ChangeNotifier {
 
       // _questions = (questions as List).map((q) => Question.fromJson(q['data'])).toList();
 
-      // _students = (candidate as List).map((s) => Candidate.fromJson({'id': s['id']})).toList();
+      /*   _students = (candidate as List).map((s) => Candidate.fromJson({await _supabase.from('candidates').select().eq('id': s['id'])}))
+          .toList();
+      print(_students.first.name);*/
 
-      return {'state': exam["state"]};
+      return {
+        'state': exam["state"],
+        'group_id': exam['candidate_group_id'],
+        'library_id': exam['library_id'],
+        'blueprint_id': exam['exam_blueprint_id'],
+      };
       // return {'config': exam['config'], 'state': exam['state'], 'allocations': exam['allocations'] ?? {}};
     } catch (e) {
       _errorMessage = e.toString();

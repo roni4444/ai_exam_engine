@@ -6,7 +6,7 @@ import '../models/exam_models.dart';
 import '../providers/supabase_provider.dart';
 import '../widgets/question_card_widget.dart';
 import '../widgets/stat_card_widget.dart';
-import 'simulation_screen.dart';
+import 'distribution_screen.dart';
 import 'dart:typed_data';
 import 'dart:js_interop';
 

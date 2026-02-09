@@ -5,7 +5,7 @@ import 'package:ai_exam_engine/providers/exam_blueprint_provider.dart';
 import 'package:ai_exam_engine/screens/question_generation_screen.dart';
 import 'package:ai_exam_engine/screens/review_questions_screen.dart';
 import 'package:ai_exam_engine/screens/settings_screen.dart';
-import 'package:ai_exam_engine/screens/simulation_screen.dart';
+import 'package:ai_exam_engine/screens/distribution_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -57,7 +57,9 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   ProcessingStatus processingStatus = ProcessingStatus.idle;
   String? selectedGroupId;
   String _examId = "";
+  String _group_id = "";
   String _language = "";
+  List<Candidate> candidates = [];
   ExamConfig? _config;
   // List<Candidate> filteredCandidates = [];
   // List<Candidate> unfilteredCandidates = [];
@@ -526,14 +528,13 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                                     onTap: () async {
                                                       final data = await examProvider.loadExamData(exam.id);
                                                       if (!context.mounted) return;
-                                                      if (kDebugMode) {
-                                                        print("data ${data!['state']}");
-                                                      }
                                                       _examId = exam.id;
-                                                      if (data != null && data['state'] == 'setup') {
+                                                      _group_id = data?['group_id'];
+                                                      // candidates = examProvider.students;
+                                                      if (data != null && examProvider.examState == 'setup') {
                                                         _pageViewController.jumpToPage(1);
                                                       }
-                                                      if (data != null && data['state'] == 'setupComplete') {
+                                                      if (data != null && examProvider.examState == 'setupComplete') {
                                                         _pageViewController.jumpToPage(2);
                                                       }
                                                     },
@@ -992,7 +993,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                       ),
                       SetupScreen(onNext: onSetupScreenNext),
                       QuestionGenerationScreen(examId: _examId, config: _config, onNext: onQuestionScreenNext, language: _language),
-                      SimulationScreen(examId: _examId, config: _config),
+                      DistributionScreen(examId: _examId, groupId: _group_id),
                     ],
                   ),
                 ),

@@ -290,10 +290,16 @@ class _QuestionGenerationScreenState extends State<QuestionGenerationScreen> wit
             children: [
               _buildStatCard('Total Questions', questions.length.toString(), Icons.quiz, Colors.blue),
               _buildStatCard('Total Marks', stats['totalMarks'].toString(), Icons.stars, Colors.purple),
-              _buildStatCard('Easy', stats['easy'].toString(), Icons.sentiment_satisfied, Colors.green),
-              _buildStatCard('Medium', stats['medium'].toString(), Icons.sentiment_neutral, Colors.orange),
-              _buildStatCard('Hard', stats['hard'].toString(), Icons.sentiment_very_dissatisfied, Colors.red),
-              _buildStatCard('Scenarios', stats['scenarios'].toString(), Icons.auto_stories, Colors.indigo),
+              (stats['easy']! > 0) ? _buildStatCard('Easy', stats['easy'].toString(), Icons.sentiment_satisfied, Colors.green) : SizedBox.shrink(),
+              (stats['medium']! > 0)
+                  ? _buildStatCard('Medium', stats['medium'].toString(), Icons.sentiment_neutral, Colors.orange)
+                  : SizedBox.shrink(),
+              (stats['hard']! > 0)
+                  ? _buildStatCard('Hard', stats['hard'].toString(), Icons.sentiment_very_dissatisfied, Colors.red)
+                  : SizedBox.shrink(),
+              (stats['scenarios']! > 0)
+                  ? _buildStatCard('Scenarios', stats['scenarios'].toString(), Icons.auto_stories, Colors.indigo)
+                  : SizedBox.shrink(),
             ],
           ),
           const SizedBox(height: 32),
