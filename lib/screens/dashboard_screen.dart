@@ -446,7 +446,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                             });
                                           },
                                         ),
-                                        const SizedBox(width: 16),
+                                        /*const SizedBox(width: 16),
                                         ActionCard(
                                           icon: Icons.upload_file,
                                           title: 'Grade Existing',
@@ -458,7 +458,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                                               _pageViewController.jumpToPage(3);
                                             });
                                           },
-                                        ),
+                                        ),*/
                                       ],
                                     ),
                                   ],
